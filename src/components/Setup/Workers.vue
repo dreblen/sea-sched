@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import type { Worker } from '@/types'
 import { useSetupStore } from '@/stores/setup'
 
 import ListToDetail from '../ListToDetail.vue'
+import TagSelect from '../TagSelect.vue'
 
 const setup = useSetupStore()
 </script>
@@ -15,6 +17,9 @@ const setup = useSetupStore()
             <v-row>
                 <v-col>
                     <v-text-field label="Name" v-model="worker.item.name"></v-text-field>
+                </v-col>
+                <v-col>
+                    <tag-select v-model="(worker.item as Worker).tags" />
                 </v-col>
             </v-row>
         </template>

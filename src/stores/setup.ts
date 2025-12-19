@@ -45,6 +45,88 @@ export const useSetupStore = defineStore('setup', () => {
         })
     }
 
+    function removeEventShift(eventId?: number, shiftId?: number) {
+        if (eventId === undefined || shiftId === undefined) {
+            return
+        }
+
+        const event = events.value.find((e) => e.id === eventId)
+        if (!event) {
+            return
+        }
+
+        event.shifts = event.shifts.filter((s) => s.id !== shiftId)
+    }
+
+    function addShiftSlot(eventId: number, shiftId: number) {
+        const event = events.value.find((e) => e.id === eventId)
+        if (!event) {
+            return
+        }
+
+        const shift = event.shifts.find((s) => s.id === shiftId)
+        if (!shift) {
+            return
+        }
+
+        const maxSlotId = shift.slots.reduce((p, c) => (p > c.id) ? p : c.id, 0)
+
+        shift.slots.push({
+            id: maxSlotId + 1,
+            name: `New Slot ${maxSlotId + 1}`,
+            tags: [],
+            isRequired: true
+        })
+    }
+
+    function removeShiftSlot(eventId?: number, shiftId?: number, slotId?: number) {
+        if (eventId === undefined || shiftId === undefined || slotId === undefined) {
+            return
+        }
+
+        const event = events.value.find((e) => e.id === eventId)
+        if (!event) {
+            return
+        }
+
+        const shift = event.shifts.find((s) => s.id === shiftId)
+        if (!shift) {
+            return
+        }
+
+        shift.slots = shift.slots.filter((s) => s.id !== slotId)
+    }
+
+    function addEventRecurrence(eventId: number) {
+        const event = events.value.find((e) => e.id === eventId)
+        if (!event) {
+            return
+        }
+
+        const maxRecurrenceId = event.recurrences.reduce((p, c) => (p > c.id) ? p : c.id, 0)
+
+        event.recurrences.push({
+            id: maxRecurrenceId + 1,
+            name: `Pattern ${maxRecurrenceId + 1}`,
+            interval: 'week',
+            startOffset: 0,
+            step: 1
+        })
+    }
+
+    function removeEventRecurrence(eventId?: number, recurrenceId?: number) {
+        if (eventId === undefined || recurrenceId === undefined) {
+            return
+        }
+
+        const event = events.value.find((e) => e.id === eventId)
+        if (!event) {
+            return
+        }
+
+        event.recurrences = event.recurrences.filter((r) => r.id !== recurrenceId)
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Workers
     ////////////////////////////////////////////////////////////////////////////
@@ -100,6 +182,11 @@ export const useSetupStore = defineStore('setup', () => {
         addEvent,
         removeEvent,
         addEventShift,
+        removeEventShift,
+        addShiftSlot,
+        removeShiftSlot,
+        addEventRecurrence,
+        removeEventRecurrence,
         workers,
         addWorker,
         removeWorker,

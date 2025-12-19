@@ -17,6 +17,9 @@ const currentItem = computed(() => props.items.find(item => item.id === currentI
 
 const showConfirmationDialog = ref(false)
 
+// Vertical versions of the component remove space between list and detail
+const verticalPaddingClass = computed(() => props.vertical ? 'my-0' : null)
+
 defineEmits({
     add() { return true },
     remove(id?: number) { return true }
@@ -26,7 +29,7 @@ defineEmits({
 <template>
     <v-container fluid max-height="80vh">
         <v-row>
-            <v-col cols="12" :md="(props.vertical) ? 12 : 3">
+            <v-col cols="12" :md="(props.vertical) ? 12 : 3" :class="verticalPaddingClass">
                 <v-card variant="outlined">
                     <v-card-actions>
                         <v-row>
@@ -50,7 +53,7 @@ defineEmits({
                     />
                 </v-card>
             </v-col>
-            <v-col>
+            <v-col v-if="$slots.default" :class="verticalPaddingClass">
                 <v-card class="fill-height">
                     <v-card-text>
                         <slot :item="currentItem"></slot>
@@ -70,4 +73,7 @@ defineEmits({
             </v-card>
         </v-dialog>
     </v-container>
+    <template v-if="$slots.uncontained">
+        <slot name="uncontained" :item="currentItem"></slot>
+    </template>
 </template>
