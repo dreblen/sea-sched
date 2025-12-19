@@ -1,0 +1,73 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+
+interface ListToDetailItem {
+    id: number
+    name: string
+}
+
+const props = defineProps<{
+    items: Array<ListToDetailItem>
+    vertical?: boolean
+}>()
+
+const currentItemIds = ref<number[]>()
+const currentItemId = computed(() => currentItemIds.value ? currentItemIds.value[0] : undefined)
+const currentItem = computed(() => props.items.find(item => item.id === currentItemId.value))
+
+const showConfirmationDialog = ref(false)
+
+defineEmits({
+    add() { return true },
+    remove(id?: number) { return true }
+})
+</script>
+
+<template>
+    <v-container fluid max-height="80vh">
+        <v-row>
+            <v-col cols="12" :md="(props.vertical) ? 12 : 3">
+                <v-card variant="outlined">
+                    <v-card-actions>
+                        <v-row>
+                            <v-col class="pr-0">
+                                <v-btn block color="error" :disabled="!currentItem" @click="showConfirmationDialog = true">Remove</v-btn>
+                            </v-col>
+                            <v-col class="pl-0">
+                                <v-btn block color="success" @click="$emit('add')">Add</v-btn>
+                            </v-col>
+                        </v-row>
+                    </v-card-actions>
+                    <v-list
+                        v-model:selected="currentItemIds"
+                        mandatory
+                        density="compact"
+                        item-value="id"
+                        item-title="name"
+                        :items="items"
+                        max-height="70vh"
+                        style="overflow-y: scroll"
+                    />
+                </v-card>
+            </v-col>
+            <v-col>
+                <v-card class="fill-height">
+                    <v-card-text>
+                        <slot :item="currentItem"></slot>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
+        <v-dialog v-model="showConfirmationDialog" persistent>
+            <v-card>
+                <v-card-text>
+                    Are you sure you want to remove this item?
+                </v-card-text>
+                <v-card-actions>
+                    <v-btn @click="showConfirmationDialog = false">No</v-btn>
+                    <v-btn color="error" @click="$emit('remove', currentItemId); showConfirmationDialog = false">Yes</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+    </v-container>
+</template>
