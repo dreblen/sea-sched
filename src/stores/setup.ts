@@ -109,7 +109,8 @@ export const useSetupStore = defineStore('setup', () => {
             id: maxRecurrenceId + 1,
             name: `Pattern ${maxRecurrenceId + 1}`,
             interval: 'week',
-            startOffset: 0,
+            weekOffset: 1,
+            monthOffset: 1,
             step: 1
         })
     }

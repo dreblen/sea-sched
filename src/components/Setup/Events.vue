@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { Event, Shift, Slot } from '@/types'
+import type { Event, Shift, Slot, RecurrencePattern } from '@/types'
 import { useSetupStore } from '@/stores/setup'
 
 import ListToDetail from '../ListToDetail.vue'
 import TagSelect from '../TagSelect.vue'
+import RecurrencePatternDetail from '../RecurrencePatternDetail.vue'
 
 const setup = useSetupStore()
 </script>
@@ -31,7 +32,7 @@ const setup = useSetupStore()
                                 No recurrence pattern currently selected.
                             </template>
                             <template v-else>
-                                {{ recurrence.item.name }}
+                                <recurrence-pattern-detail v-model="(recurrence.item as RecurrencePattern)"></recurrence-pattern-detail>
                             </template>
                         </template>
                     </list-to-detail>

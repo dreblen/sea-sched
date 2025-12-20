@@ -31,7 +31,8 @@ export interface Shift extends Tagged {
 
 export interface RecurrencePattern extends Common {
     interval: 'day'|'week'|'month'
-    startOffset: number
+    weekOffset: number
+    monthOffset: number
     step: number
 }
 
