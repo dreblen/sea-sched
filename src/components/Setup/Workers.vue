@@ -9,6 +9,11 @@ import TagSelect from '../TagSelect.vue'
 const setup = useSetupStore()
 
 // Controls and logic for unavailability date selections
+function onRemoveExpiredClick(worker: Worker) {
+    const cutoff = (new Date()).toISOString().split('T')[0] as string
+    worker.unavailableDates = worker.unavailableDates.filter((ad) => ad.dateEnd >= cutoff)
+}
+
 const showDateStartSelector = ref(false)
 const dateStartBuffer = ref(new Date())
 const showDateEndSelector = ref(false)
@@ -102,8 +107,41 @@ const tagLogicOptions = [
                 </v-col>
             </v-row>
             <v-row>
-                <v-col>
+                <v-col cols="12">
                     <h1 class="text-h4">Unavailability</h1>
+                    <p>
+                        Define specific date ranges that a worker is unavailable
+                        for at all or based on certain tag matches. If a worker
+                        is never available for a certain shift/etc., use tags at
+                        the worker level to avoid repeating logic for new date
+                        ranges.
+                    </p>
+                </v-col>
+                <v-col cols="12">
+                    <v-dialog max-width="500px">
+                        <template #activator="{ props }">
+                            <v-btn
+                                v-bind="props"
+                                color="error"
+                                text="Remove All Expired"
+                            />
+                        </template>
+                        <template #default="{ isActive }">
+                            <v-card>
+                                <v-card-text>
+                                    Are you sure you want to remove all
+                                    unavailability ranges for this worker that
+                                    have an end date in the past?
+                                </v-card-text>
+                                <v-card-actions>
+                                    <v-btn @click="isActive.value = false">No</v-btn>
+                                    <v-btn color="error" @click="onRemoveExpiredClick(worker.item as Worker); isActive.value = false">Yes</v-btn>
+                                </v-card-actions>
+                            </v-card>
+                        </template>
+                    </v-dialog>
+                </v-col>
+                <v-col>
                     <list-to-detail
                         :items="(worker.item as Worker).unavailableDates"
                         vertical
