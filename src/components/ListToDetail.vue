@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 
 interface ListToDetailItem {
     id: number
@@ -9,11 +9,20 @@ interface ListToDetailItem {
 const props = defineProps<{
     items: Array<ListToDetailItem>
     vertical?: boolean
+    itemTitle?: string
 }>()
 
 const currentItemIds = ref<number[]>()
 const currentItemId = computed(() => currentItemIds.value ? currentItemIds.value[0] : undefined)
 const currentItem = computed(() => props.items.find(item => item.id === currentItemId.value))
+
+// If our list of items is emptied out, reset our selection since that won't
+// happen automatically
+watchEffect(() => {
+    if (props.items.length === 0) {
+        currentItemIds.value = []
+    }
+})
 
 const showConfirmationDialog = ref(false)
 
@@ -22,7 +31,8 @@ const verticalPaddingClass = computed(() => props.vertical ? 'my-0' : null)
 
 defineEmits({
     add() { return true },
-    remove(id?: number) { return true }
+    remove(id?: number) { return true },
+    change(id?: number, name?: string) { return true }
 })
 </script>
 
@@ -46,10 +56,11 @@ defineEmits({
                         mandatory
                         density="compact"
                         item-value="id"
-                        item-title="name"
+                        :item-title="itemTitle || 'name'"
                         :items="items"
                         max-height="70vh"
                         style="overflow-y: scroll"
+                        @update:selected="$emit('change', currentItemId, currentItem ? ((currentItem as unknown) as { [propName: string]: string })[itemTitle || 'name'] : undefined)"
                     />
                 </v-card>
             </v-col>

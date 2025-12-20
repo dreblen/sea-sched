@@ -139,7 +139,12 @@ export const useSetupStore = defineStore('setup', () => {
         workers.value.push({
             id: maxWorkerId.value + 1,
             name: `New Worker ${maxWorkerId.value + 1}`,
-            tags: []
+            tags: [],
+            weekLimit: 0,
+            weekLimitRequired: false,
+            monthLimit: 0,
+            monthLimitRequired: false,
+            unavailableDates: []
         })
     }
 
@@ -148,6 +153,38 @@ export const useSetupStore = defineStore('setup', () => {
             return
         }
         workers.value = workers.value.filter((w) => w.id !== id)
+    }
+
+    function addWorkerUnvailableDate(workerId: number) {
+        const worker = workers.value.find((w) => w.id === workerId)
+        if (!worker) {
+            return
+        }
+
+        const maxUnvailableDateId = worker.unavailableDates.reduce((p, c) => (p > c.id) ? p : c.id, 0)
+
+        const d = (new Date).toISOString().split('T')[0] as string
+        worker.unavailableDates.push({
+            id: maxUnvailableDateId + 1,
+            name: `${d} to ${d}`,
+            tags: [],
+            dateStart: d,
+            dateEnd: d,
+            tagLogic: 'any'
+        })
+    }
+
+    function removeWorkerUnavailableDate(workerId?: number, unavailableDateId?: number) {
+        if (workerId === undefined || unavailableDateId === undefined) {
+            return
+        }
+
+        const worker = workers.value.find((w) => w.id === workerId)
+        if (!worker) {
+            return
+        }
+
+        worker.unavailableDates = worker.unavailableDates.filter((d) => d.id !== unavailableDateId)
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -251,6 +288,8 @@ export const useSetupStore = defineStore('setup', () => {
         workers,
         addWorker,
         removeWorker,
+        addWorkerUnvailableDate,
+        removeWorkerUnavailableDate,
         tags,
         addTag,
         removeTag,

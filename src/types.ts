@@ -18,7 +18,18 @@ export interface TagAffinity extends Common {
     counter: number
 }
 
+export interface AvailabilityDate extends Tagged {
+    dateStart: string
+    dateEnd: string
+    tagLogic: 'any'|'all'
+}
+
 export interface Worker extends Tagged {
+    weekLimit: number
+    weekLimitRequired: boolean
+    monthLimit: number
+    monthLimitRequired: boolean
+    unavailableDates: AvailabilityDate[]
 }
 
 export interface Slot extends Tagged {

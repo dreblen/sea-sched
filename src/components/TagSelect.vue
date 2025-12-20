@@ -7,6 +7,10 @@ import type { Tag } from '@/types'
 const setup = useSetupStore()
 
 const model = defineModel<Val<Tag,boolean>[]>()
+const props = defineProps<{
+    label?: string
+    hint?: string
+}>()
 </script>
 
 <template>
@@ -15,7 +19,8 @@ const model = defineModel<Val<Tag,boolean>[]>()
         :items="setup.tags"
         item-title="name"
         item-value="id"
-        label="Tags"
+        :label="label || 'Tags'"
+        :hint="hint"
         chips
         closable-chips
         multiple
