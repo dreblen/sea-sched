@@ -61,7 +61,7 @@ defineEmits({
                 </v-card>
             </v-col>
         </v-row>
-        <v-dialog v-model="showConfirmationDialog" persistent>
+        <v-dialog max-width="500px" v-model="showConfirmationDialog" persistent>
             <v-card>
                 <v-card-text>
                     Are you sure you want to remove this item?

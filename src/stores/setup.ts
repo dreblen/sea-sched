@@ -173,9 +173,69 @@ export const useSetupStore = defineStore('setup', () => {
         for (const event of events.value) {
             event.tags = event.tags.filter((t) => t.id !== id)
         }
+        for (const affinity of tagAffinities.value) {
+            tagAffinities.value = tagAffinities.value.filter((a) => a.tagId1 !== id && a.tagId2 !== id)
+        }
 
         // Remove the tag itself
         tags.value = tags.value.filter((t) => t.id !== id)
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Tag Affinities
+    ////////////////////////////////////////////////////////////////////////////
+
+    const tagAffinities = useLocalStorage('setup-tag-affinities', [] as SeaSched.TagAffinity[])
+    const maxTagAffinityId = computed(() => tagAffinities.value.reduce((p, c) => (p > c.id) ? p : c.id, 0))
+
+    const affinitiesByTag = computed(() => {
+        const r = {} as { [tagId: number]: SeaSched.TagAffinity[] }
+
+        // Prepopulate empty arrays for each tag
+        for (const t of tags.value) {
+            r[t.id] = []
+        }
+        
+        // Add affinities from either side of the relationship
+        for (const a of tagAffinities.value) {
+            r[a.tagId1]?.push(a)
+            if (a.tagId1 !== a.tagId2) {
+                r[a.tagId2]?.push(a)
+            }
+        }
+
+        return r
+    })
+
+    const affinitiesByTagTag = computed(() => {
+        const r = {} as { [tagId: number]: { [tagId: number]: SeaSched.TagAffinity|undefined } }
+
+        // Populate a double-indexed list of mappings for each tag
+        for (const t of tags.value) {
+            const map = {} as { [tagId: number]: SeaSched.TagAffinity|undefined }
+            for (const t2 of tags.value) {
+                map[t2.id] = affinitiesByTag.value[t.id]?.find((a) => (a.tagId1 === t.id && a.tagId2 === t2.id) || (a.tagId2 === t.id && a.tagId1 === t2.id))
+            }
+            r[t.id] = map
+        }
+
+        return r
+    })
+
+    function addTagAffinity(tagId1: number, tagId2: number) {
+        tagAffinities.value.push({
+            id: maxTagAffinityId.value + 1,
+            name: '',
+            tagId1,
+            tagId2,
+            isPositive: true,
+            isRequired: true,
+            counter: 0
+        })
+    }
+
+    function removeTagAffinity(id: number) {
+        tagAffinities.value = tagAffinities.value.filter((a) => a.id !== id)
     }
 
     return {
@@ -194,5 +254,10 @@ export const useSetupStore = defineStore('setup', () => {
         tags,
         addTag,
         removeTag,
+        tagAffinities,
+        affinitiesByTag,
+        affinitiesByTagTag,
+        addTagAffinity,
+        removeTagAffinity,
     }
 })
