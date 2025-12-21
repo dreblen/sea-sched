@@ -3,6 +3,10 @@ interface Common {
     name: string
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Pre-Scope/Base Template
+////////////////////////////////////////////////////////////////////////////////
+
 export interface Tag extends Common {
 }
 
@@ -50,4 +54,34 @@ export interface RecurrencePattern extends Common {
 export interface Event extends Tagged {
     shifts: Shift[]
     recurrences: RecurrencePattern[]
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// In-Scope Template
+////////////////////////////////////////////////////////////////////////////////
+
+export interface ScopeSlot extends Tagged {
+    isRequired: boolean
+}
+
+export interface ScopeShift extends Tagged {
+    slots: ScopeSlot[]
+}
+
+export interface ScopeEvent extends Tagged {
+    shifts: ScopeShift[]
+    calendarDate: string
+}
+
+export interface ScopeSegment extends Tagged {
+    dateStart: string
+    dateEnd: string
+}
+
+export interface Scope extends Common {
+    dateStart: string
+    dateEnd: string
+    events: ScopeEvent[]
+    weeks: ScopeSegment[]
+    months: ScopeSegment[]
 }

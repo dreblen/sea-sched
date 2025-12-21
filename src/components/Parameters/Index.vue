@@ -1,7 +1,55 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+
+import SelectDateRange from './SelectDateRange.vue'
+
+const currentStep = ref(1)
+const steps = [
+    { title: 'Select Date Range', value: 1, component: SelectDateRange },
+    { title: 'Select Events', value: 2 },
+    { title: 'Customize Setup', value: 3 },
+    { title: 'Generate Schedules', value: 4 },
+]
+
+const canAdvance = ref(false)
+function onStepComplete() {
+    canAdvance.value = true
+}
+function onStepIncomplete() {
+    canAdvance.value = false
+}
 </script>
 
 <template>
-<p>Parameters</p>
+    <v-stepper-vertical v-model="currentStep" color="primary">
+        <v-stepper-vertical-item
+            v-for="step of steps"
+            :key="step.value"
+            v-bind="step"
+        >
+            <template v-if="step.component">
+                <component
+                    :is="step.component"
+                    @complete="onStepComplete"
+                    @incomplete="onStepIncomplete"
+                />
+            </template>
+            <template v-else>
+                Placeholder for {{ step.title }}
+            </template>
+
+            <template #next="data">
+                <template v-if="data.step < steps.length">
+                    <v-btn :disabled="!canAdvance" @click="data.next">Continue</v-btn>
+                </template>
+                <template v-else>
+                    <v-btn>Finish</v-btn>
+                </template>
+            </template>
+
+            <template #prev="data">
+                <v-btn v-if="data.step > 1" @click="data.prev">Go Back</v-btn>
+            </template>
+        </v-stepper-vertical-item>
+    </v-stepper-vertical>
 </template>
