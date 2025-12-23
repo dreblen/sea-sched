@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-import SelectDateRange from './SelectDateRange.vue'
+import { useParametersStore } from '@/stores/parameters'
 
-const currentStep = ref(1)
+import SelectDateRange from './SelectDateRange.vue'
+import SelectEvents from './SelectEvents.vue'
+import CustomizeSetup from './CustomizeSetup.vue'
+
+const parameters = useParametersStore()
+
 const steps = [
     { title: 'Select Date Range', value: 1, component: SelectDateRange },
-    { title: 'Select Events', value: 2 },
-    { title: 'Customize Setup', value: 3 },
+    { title: 'Select Events', value: 2, component: SelectEvents },
+    { title: 'Customize Setup', value: 3, component: CustomizeSetup },
     { title: 'Generate Schedules', value: 4 },
 ]
 
@@ -21,7 +26,7 @@ function onStepIncomplete() {
 </script>
 
 <template>
-    <v-stepper-vertical v-model="currentStep" color="primary">
+    <v-stepper-vertical v-model="parameters.currentStep" color="primary">
         <v-stepper-vertical-item
             v-for="step of steps"
             :key="step.value"
