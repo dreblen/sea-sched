@@ -25,13 +25,17 @@ const sortedEvents = computed(() => {
     })
 })
 
-// TOOD: For now, reset the selected events on each load. This should be more
-// context aware and preserve selections when possible.
-parameters.templateEventIds = setup.events
-    // We can only use events with a recurrence pattern
-    .filter((e) => e.recurrences.length > 0)
-    // We store only the ID for simplicity
-    .map((e) => e.id)
+// If there are no selections when the component loads (i.e., first entry, or
+// navigation back after manually deselecting everything), prepopulate with all
+// valid options. This works because the user can't advance to the next step
+// while this list is empty.
+if (parameters.templateEventIds.length === 0) {
+    parameters.templateEventIds = setup.events
+        // We can only use events with a recurrence pattern
+        .filter((e) => e.recurrences.length > 0)
+        // We store only the ID for simplicity
+        .map((e) => e.id)
+}
 
 watchEffect(() => {
     if (parameters.templateEventIds.length > 0) {
