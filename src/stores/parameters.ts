@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
 import { useSetupStore } from './setup'
+import * as util from '@/util'
 
 import type * as SeaSched from '@/types'
 
@@ -161,24 +162,12 @@ export const useParametersStore = defineStore('parameters', () => {
     // Scope Generation
     ////////////////////////////////////////////////////////////////////////////
 
-    // Given a string in the format of YYYY-MM-DD, return a JS Date object for
-    // that date at midnight local time, to avoid skewing issues
-    function getNormalizedDate(dateString: string) {
-        const buffer = new Date(dateString + 'T00:00:00Z')
-        buffer.setMinutes(buffer.getMinutes() + buffer.getTimezoneOffset())
-        return buffer
-    }
-
-    function getDateString(date: Date) {
-        return date.toISOString().split('T')[0] as string
-    }
-
     const templateEventIds = ref<number[]>([])
 
     function generateScopeEvents() {
         // Iterate our base template events and fill out their recurrences
         // within our scope range, avoiding duplicates
-        const maxDate = getNormalizedDate(scope.value.dateEnd)
+        const maxDate = util.getNormalizedDate(scope.value.dateEnd)
         const map = {} as { [calendarDate: string]: number[] }
         for (const e of setup.events.filter((e) => templateEventIds.value.includes(e.id))) {
             for (const r of e.recurrences) {
@@ -187,7 +176,7 @@ export const useParametersStore = defineStore('parameters', () => {
                         let bufferDate = new Date(scope.value.dateStart)
 
                         do {
-                            const ds = getDateString(bufferDate)
+                            const ds = util.getDateString(bufferDate)
                             if (map[ds] === undefined) {
                                 map[ds] = []
                             }
@@ -204,7 +193,7 @@ export const useParametersStore = defineStore('parameters', () => {
                         // Advance our buffer until it is at the correct day of
                         // the week for the pattern
                         // let bufferDate = new Date(scope.value.dateStart)
-                        let bufferDate = getNormalizedDate(scope.value.dateStart)
+                        let bufferDate = util.getNormalizedDate(scope.value.dateStart)
                         while (bufferDate <= maxDate) {
                             if (bufferDate.getDay() + 1 === r.weekOffset) {
                                 break
@@ -221,7 +210,7 @@ export const useParametersStore = defineStore('parameters', () => {
 
                         // Iterate the actual recurrence pattern
                         do {
-                            const ds = getDateString(bufferDate)
+                            const ds = util.getDateString(bufferDate)
                             if (map[ds] === undefined) {
                                 map[ds] = []
                             }
@@ -237,19 +226,19 @@ export const useParametersStore = defineStore('parameters', () => {
                     case 'month': {
                         // Initialize our buffer to the correct day of the month
                         // in the starting month of our scope range
-                        let bufferDate = getNormalizedDate(scope.value.dateStart)
+                        let bufferDate = util.getNormalizedDate(scope.value.dateStart)
                         bufferDate.setDate(r.monthOffset)
 
                         // Iterate the recurrence pattern
                         do {
                             // Skip this iteration if we had to go before the
                             // start of the scope range for the initialization
-                            if (bufferDate < getNormalizedDate(scope.value.dateStart)) {
+                            if (bufferDate < util.getNormalizedDate(scope.value.dateStart)) {
                                 bufferDate.setMonth(bufferDate.getMonth() + 1)
                                 continue
                             }
 
-                            const ds = getDateString(bufferDate)
+                            const ds = util.getDateString(bufferDate)
                             if (map[ds] === undefined) {
                                 map[ds] = []
                             }
@@ -336,15 +325,15 @@ export const useParametersStore = defineStore('parameters', () => {
         scope.value.months = []
 
         // Iterate our scope range and populate weeks and months within it
-        const maxDate = getNormalizedDate(scope.value.dateEnd)
-        const bufferDate = getNormalizedDate(scope.value.dateStart)
-        let weekStart = getDateString(bufferDate)
-        let monthStart = getDateString(bufferDate)
+        const maxDate = util.getNormalizedDate(scope.value.dateEnd)
+        const bufferDate = util.getNormalizedDate(scope.value.dateStart)
+        let weekStart = util.getDateString(bufferDate)
+        let monthStart = util.getDateString(bufferDate)
         while (bufferDate <= maxDate) {
-            const dateString = getDateString(bufferDate)
-            const tomorrow = getNormalizedDate(dateString)
+            const dateString = util.getDateString(bufferDate)
+            const tomorrow = util.getNormalizedDate(dateString)
             tomorrow.setDate(tomorrow.getDate() + 1)
-            const tomorrowString = getDateString(tomorrow)
+            const tomorrowString = util.getDateString(tomorrow)
 
             // Finish a week?
             if (bufferDate.getDay() === 6) {
@@ -364,7 +353,7 @@ export const useParametersStore = defineStore('parameters', () => {
 
         // Finish out any incomplete weeks or months
         bufferDate.setDate(bufferDate.getDate() - 1)
-        const dateString = getDateString(bufferDate)
+        const dateString = util.getDateString(bufferDate)
         if (dateString >= weekStart) {
             addWeek(weekStart, dateString)
         }

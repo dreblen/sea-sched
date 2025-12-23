@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { useLocalStorage } from '@vueuse/core'
 
 import { useParametersStore } from './parameters'
+import * as util from '@/util'
 
 import type * as SeaSched from '@/types'
 
@@ -167,7 +168,7 @@ export const useSetupStore = defineStore('setup', () => {
 
         const maxUnvailableDateId = worker.unavailableDates.reduce((p, c) => (p > c.id) ? p : c.id, 0)
 
-        const d = (new Date).toISOString().split('T')[0] as string
+        const d = util.getDateString()
         worker.unavailableDates.push({
             id: maxUnvailableDateId + 1,
             name: `${d} to ${d}`,

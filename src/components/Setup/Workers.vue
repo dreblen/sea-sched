@@ -2,6 +2,7 @@
 import type { Worker, AvailabilityDate } from '@/types'
 import { ref } from 'vue'
 import { useSetupStore } from '@/stores/setup'
+import * as util from '@/util'
 
 import ListToDetail from '../ListToDetail.vue'
 import TagSelect from '../TagSelect.vue'
@@ -10,7 +11,7 @@ const setup = useSetupStore()
 
 // Controls and logic for unavailability date selections
 function onRemoveExpiredClick(worker: Worker) {
-    const cutoff = (new Date()).toISOString().split('T')[0] as string
+    const cutoff = util.getDateString()
     worker.unavailableDates = worker.unavailableDates.filter((ad) => ad.dateEnd >= cutoff)
 }
 
@@ -30,9 +31,10 @@ function onDateListChange(unavailableDateId?: number, dateString?: string) {
     // Normalize both date values into local times so they don't offset
     let local = [] as Date[]
     for (const s of [front, back]) {
-        const utc = new Date(s + 'T00:00:00Z')
-        utc.setMinutes(utc.getMinutes() + utc.getTimezoneOffset())
-        local.push(utc)
+        if (s === undefined) {
+            continue
+        }
+        local.push(util.getNormalizedDate(s))
     }
 
     dateStartBuffer.value = local[0] as Date
@@ -43,7 +45,7 @@ function onDatePickerChange(unavailableDate: AvailabilityDate, type: 'start'|'en
     const buffer = (type === 'start') ? dateStartBuffer.value : dateEndBuffer.value
     const propName = (type === 'start') ? 'dateStart' : 'dateEnd'
 
-    unavailableDate[propName] = (buffer.toISOString().split('T')[0] as string)
+    unavailableDate[propName] = util.getDateString(buffer)
     unavailableDate.name = unavailableDate.dateStart + ' to ' + unavailableDate.dateEnd
 }
 
@@ -164,7 +166,7 @@ const tagLogicOptions = [
                                                 <v-text-field
                                                     v-bind="props"
                                                     label="Range Start"
-                                                    :model-value="(dateStartBuffer.toISOString().split('T')[0] as string)"
+                                                    :model-value="util.getDateString(dateStartBuffer)"
                                                     prepend-inner-icon="mdi-calendar"
                                                     :readonly="true"
                                                     hide-details
@@ -188,7 +190,7 @@ const tagLogicOptions = [
                                                 <v-text-field
                                                     v-bind="props"
                                                     label="Range End"
-                                                    :model-value="(dateEndBuffer.toISOString().split('T')[0] as string)"
+                                                    :model-value="util.getDateString(dateEndBuffer)"
                                                     prepend-inner-icon="mdi-calendar"
                                                     :readonly="true"
                                                     hide-details
