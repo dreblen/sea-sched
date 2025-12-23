@@ -20,7 +20,13 @@ if (parameters.scope.weeks.length === 0) {
 }
 
 watchEffect(() => {
-    if (parameters.scope.events.length > 0) {
+    // Similar to our event selection, make sure we can't proceed unless we have
+    // at least one usable event
+    const eligibleEventIds = parameters.scope.events
+        .filter((e) => e.shifts.reduce((acc, s) => acc + s.slots.length,0) > 0)
+        .map((e) => e.id)
+    
+    if (eligibleEventIds.length > 0) {
         emit('complete')
     } else {
         emit('incomplete')
