@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { useSetupStore } from '@/stores/setup'
 
-import type { Val } from 'vuetify/lib/components/VCombobox/VCombobox.mjs'
-import type { Tag } from '@/types'
-
 const setup = useSetupStore()
 
-const model = defineModel<Val<Tag,boolean>[]>()
+const model = defineModel<number[]>()
 const props = defineProps<{
     label?: string
     hint?: string
@@ -19,11 +16,14 @@ const props = defineProps<{
         :items="setup.tags"
         item-title="name"
         item-value="id"
+        :return-object="false"
         :label="label || 'Tags'"
         :hint="hint"
         chips
         closable-chips
         multiple
+        hide-selected
+        autocomplete="suppress"
     >
         <template #chip="{ props, item }">
             <v-chip v-bind="props">

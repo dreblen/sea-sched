@@ -372,6 +372,24 @@ export const useParametersStore = defineStore('parameters', () => {
         generateScopeSegments()
     }
 
+    function removeTagReferences(id: number) {
+        for (const week of scope.value.weeks) {
+            week.tags = week.tags.filter((tId) => tId !== id)
+        }
+        for (const month of scope.value.months) {
+            month.tags = month.tags.filter((tId) => tId !== id)
+        }
+        for (const event of scope.value.events) {
+            event.tags = event.tags.filter((tId) => tId !== id)
+            for (const shift of event.shifts) {
+                shift.tags = shift.tags.filter((tId) => tId !== id)
+                for (const slot of shift.slots) {
+                    slot.tags = slot.tags.filter((tId) => tId !== id)
+                }
+            }
+        }
+    }
+
     return {
         currentStep,
         scope,
@@ -384,5 +402,6 @@ export const useParametersStore = defineStore('parameters', () => {
         removeShiftSlot,
         templateEventIds,
         generateScope,
+        removeTagReferences,
     }
 })

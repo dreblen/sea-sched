@@ -11,7 +11,7 @@ export interface Tag extends Common {
 }
 
 interface Tagged extends Common {
-    tags: Tag[]
+    tags: number[] // --> Tag.id
 }
 
 export interface TagAffinity extends Common {

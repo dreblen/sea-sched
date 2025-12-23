@@ -2,9 +2,13 @@ import { computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useLocalStorage } from '@vueuse/core'
 
+import { useParametersStore } from './parameters'
+
 import type * as SeaSched from '@/types'
 
 export const useSetupStore = defineStore('setup', () => {
+    const parameters = useParametersStore()
+
     ////////////////////////////////////////////////////////////////////////////
     // Events
     ////////////////////////////////////////////////////////////////////////////
@@ -207,12 +211,23 @@ export const useSetupStore = defineStore('setup', () => {
         }
         
         // Remove references to this tag
+        parameters.removeTagReferences(id)
         for (const event of events.value) {
-            event.tags = event.tags.filter((t) => t.id !== id)
+            event.tags = event.tags.filter((tId) => tId !== id)
+            for (const shift of event.shifts) {
+                shift.tags = shift.tags.filter((tId) => tId !== id)
+                for (const slot of shift.slots) {
+                    slot.tags = slot.tags.filter((tId) => tId !== id)
+                }
+            }
         }
-        for (const affinity of tagAffinities.value) {
-            tagAffinities.value = tagAffinities.value.filter((a) => a.tagId1 !== id && a.tagId2 !== id)
+        for (const worker of workers.value) {
+            worker.tags = worker.tags.filter((tId) => tId !== id)
+            for (const unavailableDate of worker.unavailableDates) {
+                unavailableDate.tags = unavailableDate.tags.filter((tId) => tId !== id)
+            }
         }
+        tagAffinities.value = tagAffinities.value.filter((a) => a.tagId1 !== id && a.tagId2 !== id)
 
         // Remove the tag itself
         tags.value = tags.value.filter((t) => t.id !== id)
