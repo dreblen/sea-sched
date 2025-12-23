@@ -197,6 +197,8 @@ export const useParametersStore = defineStore('parameters', () => {
 
                             bufferDate.setDate(bufferDate.getDate() + r.step)
                         } while (bufferDate <= maxDate)
+
+                        break
                     }
                     case 'week': {
                         // Advance our buffer until it is at the correct day of
@@ -229,6 +231,8 @@ export const useParametersStore = defineStore('parameters', () => {
 
                             bufferDate.setDate(bufferDate.getDate() + (7 * r.step))
                         } while (bufferDate <= maxDate)
+
+                        break
                     }
                     case 'month': {
                         // Initialize our buffer to the correct day of the month
@@ -255,6 +259,8 @@ export const useParametersStore = defineStore('parameters', () => {
 
                             bufferDate.setMonth(bufferDate.getMonth() + r.step)
                         } while (bufferDate <= maxDate)
+
+                        break
                     }
                 }
             }
