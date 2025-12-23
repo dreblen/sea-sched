@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { ScopeEvent } from '@/types'
 import { useParametersStore } from '@/stores/parameters'
+import * as util from '@/util'
 
-import ListToDetail from '../ListToDetail.vue'
-import TagSelect from '../TagSelect.vue'
+import EventListToDetail from '../EventListToDetail.vue'
 import { watchEffect } from 'vue'
 
 const emit = defineEmits({
@@ -25,6 +26,22 @@ watchEffect(() => {
         emit('incomplete')
     }
 })
+
+const showEventCalendarDateSelector = ref(false)
+const eventCalendarDateBuffer = ref(new Date())
+
+function onEventListChange(eventId?: number, eventName?: string) {
+    if (eventId === undefined) {
+        return
+    }
+
+    const event = parameters.scope.events.find((e) => e.id === eventId)
+    if (event === undefined) {
+        return
+    }
+
+    eventCalendarDateBuffer.value = util.getNormalizedDate(event.calendarDate)
+}
 </script>
 
 <template>
@@ -50,26 +67,39 @@ watchEffect(() => {
             </v-dialog>
         </v-col>
     </v-row>
-    <v-row>
-        <list-to-detail
+    <v-row style="max-height: 100%; overflow-y: scroll;">
+        <event-list-to-detail
             :items="parameters.scope.events"
-            v-slot="event"
-            @add="parameters.addEvent"
-            @remove="parameters.removeEvent"
+            :store="parameters"
+            @change-events="onEventListChange"
         >
-            <template v-if="!event.item">
-            No event currently selected.
+            <template #eventProps="{ item: event }">
+                <v-col>
+                    <v-menu
+                        v-model="showEventCalendarDateSelector"
+                        :close-on-content-click="false"
+                    >
+                        <template #activator="{ props }">
+                            <v-text-field
+                                v-bind="props"
+                                v-model="(event as ScopeEvent).calendarDate"
+                                label="Calendar Date"
+                                prepend-inner-icon="mdi-calendar"
+                                :readonly="true"
+                                hide-details
+                            />
+                        </template>
+                        <v-date-picker
+                            v-model="eventCalendarDateBuffer"
+                            show-adjacent-months
+                            @update:model-value="(event as ScopeEvent).calendarDate = util.getDateString(eventCalendarDateBuffer)"
+                            @input="showEventCalendarDateSelector = false"
+                            :min="parameters.scope.dateStart"
+                            :max="parameters.scope.dateEnd"
+                        />
+                    </v-menu>
+                </v-col>
             </template>
-            <template v-else>
-                <v-row>
-                    <v-col>
-                        <v-text-field label="Name" v-model="event.item.name"></v-text-field>
-                    </v-col>
-                    <v-col>
-                        <tag-select v-model="(event.item as ScopeEvent).tags" />
-                    </v-col>
-                </v-row>
-            </template>
-        </list-to-detail>
+        </event-list-to-detail>
     </v-row>
 </template>

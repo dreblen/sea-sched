@@ -10,7 +10,7 @@ interface Common {
 export interface Tag extends Common {
 }
 
-interface Tagged extends Common {
+export interface Tagged extends Common {
     tags: number[] // --> Tag.id
 }
 
