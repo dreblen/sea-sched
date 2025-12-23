@@ -25,16 +25,22 @@ const sortedEvents = computed(() => {
     })
 })
 
+// Build a list of events that are eligible for scheduling
+const eligibleEventIds = computed(() => setup.events
+    // We can only use events with a recurrence pattern
+    .filter((e) => e.recurrences.length > 0)
+    // And at least one shift, with at least one slot
+    .filter((e) => e.shifts.reduce((acc, s) => acc + s.slots.length,0) > 0)
+    // We store only the ID for simplicity
+    .map((e) => e.id)
+)
+
 // If there are no selections when the component loads (i.e., first entry, or
 // navigation back after manually deselecting everything), prepopulate with all
 // valid options. This works because the user can't advance to the next step
 // while this list is empty.
 if (parameters.templateEventIds.length === 0) {
-    parameters.templateEventIds = setup.events
-        // We can only use events with a recurrence pattern
-        .filter((e) => e.recurrences.length > 0)
-        // We store only the ID for simplicity
-        .map((e) => e.id)
+    parameters.templateEventIds = eligibleEventIds.value.slice()
 }
 
 watchEffect(() => {
@@ -50,9 +56,9 @@ watchEffect(() => {
     <v-row>
         <v-col>
             <p>
-                If an event is defined without any recurrence pattern, it will
-                appear here as disabled. To be included in a schedule, an event
-                must have at least one pattern.
+                If an event is not eligible for scheduling, it will appear here
+                as disabled. To be included in a schedule, an event must have at
+                least one recurrence pattern, shift, and slot.
             </p>
         </v-col>
     </v-row>
@@ -62,7 +68,7 @@ watchEffect(() => {
                 v-model="parameters.templateEventIds"
                 :value="event.id"
                 :label="event.name"
-                :disabled="event.recurrences.length === 0"
+                :disabled="!eligibleEventIds.includes(event.id)"
                 hide-details
                 color="primary"
                 style="display: block"
