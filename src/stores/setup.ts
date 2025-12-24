@@ -15,91 +15,30 @@ export const useSetupStore = defineStore('setup', () => {
     ////////////////////////////////////////////////////////////////////////////
 
     const events = useLocalStorage('setup-events',[] as SeaSched.Event[])
-    const maxEventId = computed(() => events.value.reduce((p, c) => (p > c.id) ? p : c.id, 0))
 
     function addEvent() {
-        events.value.push({
-            id: maxEventId.value + 1,
-            name: `New Event ${maxEventId.value + 1}`,
-            tags: [],
-            shifts: [],
-            recurrences: []
-        })
+        const newEvent = util.addEvent(events.value)
+        newEvent.recurrences = []
     }
 
     function removeEvent(id?: number) {
-        if (id === undefined) {
-            return
-        }
-        events.value = events.value.filter((e) => e.id !== id)
+        events.value = (util.removeEvent(events.value, id) as SeaSched.Event[])
     }
 
     function addEventShift(eventId: number) {
-        const event = events.value.find((e) => e.id === eventId)
-        if (!event) {
-            return
-        }
-
-        const maxShiftId = event.shifts.reduce((p, c) => (p > c.id) ? p : c.id, 0)
-
-        event.shifts.push({
-            id: maxShiftId + 1,
-            name: `New Shift ${maxShiftId + 1}`,
-            tags: [],
-            slots: []
-        })
+        util.addEventShift(events.value, eventId)
     }
 
     function removeEventShift(eventId?: number, shiftId?: number) {
-        if (eventId === undefined || shiftId === undefined) {
-            return
-        }
-
-        const event = events.value.find((e) => e.id === eventId)
-        if (!event) {
-            return
-        }
-
-        event.shifts = event.shifts.filter((s) => s.id !== shiftId)
+        util.removeEventShift(events.value, eventId, shiftId)
     }
 
     function addShiftSlot(eventId: number, shiftId: number) {
-        const event = events.value.find((e) => e.id === eventId)
-        if (!event) {
-            return
-        }
-
-        const shift = event.shifts.find((s) => s.id === shiftId)
-        if (!shift) {
-            return
-        }
-
-        const maxSlotId = shift.slots.reduce((p, c) => (p > c.id) ? p : c.id, 0)
-
-        shift.slots.push({
-            id: maxSlotId + 1,
-            name: `New Slot ${maxSlotId + 1}`,
-            tags: [],
-            isRequired: true
-        })
+        util.addShiftSlot(events.value, eventId, shiftId)
     }
 
     function removeShiftSlot(eventId?: number, shiftId?: number, slotId?: number) {
-        if (eventId === undefined || shiftId === undefined || slotId === undefined) {
-            return
-        }
-
-        const event = events.value.find((e) => e.id === eventId)
-        if (!event) {
-            return
-        }
-
-        const shift = event.shifts.find((s) => s.id === shiftId)
-        if (!shift) {
-            return
-        }
-
-        shift.slots = shift.slots.filter((s) => s.id !== slotId)
+        util.removeShiftSlot(events.value, eventId, shiftId, slotId)
     }
 
     function addEventRecurrence(eventId: number) {

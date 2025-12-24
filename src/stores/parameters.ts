@@ -60,102 +60,31 @@ export const useParametersStore = defineStore('parameters', () => {
     // Scope Events
     ////////////////////////////////////////////////////////////////////////////
 
-    // XXX: It's not good how much this repeats logic from the setup store
-
-    const maxEventId = computed(() => scope.value.events.reduce((p, c) => (p > c.id) ? p : c.id, 0))
-
     function addEvent() {
-        const newEvent: SeaSched.ScopeEvent = {
-            id: maxEventId.value + 1,
-            name: `New Event ${maxEventId.value + 1}`,
-            tags: [],
-            shifts: [],
-            calendarDate: '1900-01-01'
-        }
-        scope.value.events.push(newEvent)
+        const newEvent = util.addEvent(scope.value.events)
+        newEvent.calendarDate = util.getDateString(new Date(scope.value.dateStart))
 
         return newEvent
     }
 
     function removeEvent(id?: number) {
-        if (id === undefined) {
-            return
-        }
-        scope.value.events = scope.value.events.filter((e) => e.id !== id)
+        scope.value.events = (util.removeEvent(scope.value.events, id) as SeaSched.ScopeEvent[])
     }
 
     function addEventShift(eventId: number) {
-        const event = scope.value.events.find((e) => e.id === eventId)
-        if (!event) {
-            return
-        }
-
-        const maxShiftId = event.shifts.reduce((p, c) => (p > c.id) ? p : c.id, 0)
-
-        const newShift: SeaSched.ScopeShift = {
-            id: maxShiftId + 1,
-            name: `New Shift ${maxShiftId + 1}`,
-            tags: [],
-            slots: []
-        }
-        event.shifts.push(newShift)
-
-        return newShift
+        return util.addEventShift(scope.value.events, eventId)
     }
 
     function removeEventShift(eventId?: number, shiftId?: number) {
-        if (eventId === undefined || shiftId === undefined) {
-            return
-        }
-
-        const event = scope.value.events.find((e) => e.id === eventId)
-        if (!event) {
-            return
-        }
-
-        event.shifts = event.shifts.filter((s) => s.id !== shiftId)
+        util.removeEventShift(scope.value.events, eventId, shiftId)
     }
 
     function addShiftSlot(eventId: number, shiftId: number) {
-        const event = scope.value.events.find((e) => e.id === eventId)
-        if (!event) {
-            return
-        }
-
-        const shift = event.shifts.find((s) => s.id === shiftId)
-        if (!shift) {
-            return
-        }
-
-        const maxSlotId = shift.slots.reduce((p, c) => (p > c.id) ? p : c.id, 0)
-
-        const newSlot: SeaSched.ScopeSlot = {
-            id: maxSlotId + 1,
-            name: `New Slot ${maxSlotId + 1}`,
-            tags: [],
-            isRequired: true
-        }
-        shift.slots.push(newSlot)
-
-        return newSlot
+        return util.addShiftSlot(scope.value.events, eventId, shiftId)
     }
 
     function removeShiftSlot(eventId?: number, shiftId?: number, slotId?: number) {
-        if (eventId === undefined || shiftId === undefined || slotId === undefined) {
-            return
-        }
-
-        const event = scope.value.events.find((e) => e.id === eventId)
-        if (!event) {
-            return
-        }
-
-        const shift = event.shifts.find((s) => s.id === shiftId)
-        if (!shift) {
-            return
-        }
-
-        shift.slots = shift.slots.filter((s) => s.id !== slotId)
+        util.removeShiftSlot(scope.value.events, eventId, shiftId, slotId)
     }
 
     ////////////////////////////////////////////////////////////////////////////

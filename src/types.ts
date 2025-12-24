@@ -85,3 +85,21 @@ export interface Scope extends Common {
     weeks: ScopeSegment[]
     months: ScopeSegment[]
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// General Helpers
+////////////////////////////////////////////////////////////////////////////////
+
+export interface GenericSlot extends Tagged {
+    isRequired: boolean
+}
+
+export interface GenericShift extends Tagged {
+    slots: GenericSlot[]
+}
+
+export interface GenericEvent extends Tagged {
+    shifts: GenericShift[]
+    recurrences?: RecurrencePattern[]
+    calendarDate?: string
+}

@@ -1,30 +1,13 @@
 <script setup lang="ts">
-import type { Tagged } from '@/types'
+import type { GenericEvent, GenericShift, GenericSlot } from '@/types'
+import type { EventManagementStore } from '@/util'
 
 import ListToDetail from './ListToDetail.vue'
 import TagSelect from './TagSelect.vue'
 
-import { useSetupStore } from '@/stores/setup'
-import { useParametersStore } from '@/stores/parameters'
-
-interface GenericSlot extends Tagged {
-    isRequired: boolean
-}
-
-interface GenericShift extends Tagged {
-    slots: GenericSlot[]
-}
-
-interface GenericEvent extends Tagged {
-    shifts: GenericShift[]
-}
-
-const setup = useSetupStore()
-const parameters = useParametersStore()
-
 const props = defineProps<{
     items: GenericEvent[]
-    store: typeof setup|typeof parameters
+    store: EventManagementStore
 }>()
 
 defineEmits({
