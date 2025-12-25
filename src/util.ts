@@ -126,6 +126,7 @@ export function removeShiftSlot(events: GenericEvent[], eventId?: number, shiftI
 ////////////////////////////////////////////////////////////////////////////////
 
 import type { ScopeEvent, Schedule, ScheduleEvent, ScheduleShift, ScheduleSlot, TagAffinityMapMap, Worker } from '@/types'
+import md5 from 'md5'
 
 // Create a new schedule object based on but distinct from an existing event
 // list (either from a scope or another schedule)
@@ -277,4 +278,20 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[],
     } else {
         return workersUnwanted
     }
+}
+
+export function getScheduleHash(schedule: Schedule) {
+    const assignments = [] as number[]
+    for (const event of schedule.events) {
+        for (const shift of event.shifts) {
+            for (const slot of shift.slots) {
+                let workerId = slot.workerId
+                if (workerId === undefined) {
+                    workerId = -1
+                }
+                assignments.push(workerId)
+            }
+        }
+    }
+    return md5(JSON.stringify(assignments))
 }

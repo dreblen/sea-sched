@@ -27,6 +27,7 @@ onmessage = function (ev) {
     const message: InboundMessage = JSON.parse(ev.data)
 
     const schedules = [] as SeaSched.Schedule[]
+    const scheduleHashes = [] as string[]
     for (let i = 0; i < message.permutationThreshold; i++) {
         const seed = message.seed + i
         const schedule = util.newSchedule(message.events)
@@ -101,10 +102,26 @@ onmessage = function (ev) {
             }
         }
 
-        // TODO: Grade and qualify the schedule before adding to result list
-        if (schedules.length < message.resultThreshold) {
+        // Qualify the schedule before including it
+        let shouldKeepResult = true
+
+        // If a previous iteration has produced the same schedule, don't keep
+        // it again
+        const hash = util.getScheduleHash(schedule)
+        if (scheduleHashes.includes(hash)) {
+            shouldKeepResult = false
+        }
+
+        // TODO: Grade and further qualify the schedule
+
+        // Add the schedule to our result list if we still want to keep it
+        if (shouldKeepResult) {
             schedules.push(schedule)
-        } else {
+            scheduleHashes.push(hash)
+        }
+
+        // Stop generating if we've reached our qualified result limit
+        if (schedules.length >= message.resultThreshold) {
             break
         }
 

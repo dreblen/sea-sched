@@ -131,7 +131,13 @@ async function generate() {
                 case 'results': {
                     const data = message.data as OutboundResultData
                     for (const s of data.schedules) {
-                        results.addSchedule(s)
+                        // Results are deduplicated within the generation
+                        // worker, but we make this check in case the same
+                        // result is produced by different threads
+                        const hash = util.getScheduleHash(s)
+                        if (!results.scheduleHashes.includes(hash)) {
+                            results.addSchedule(s)
+                        }
                     }
                     isGenerating.value = false
                     setTimeout(dispose, 5000)
