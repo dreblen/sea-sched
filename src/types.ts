@@ -22,6 +22,14 @@ export interface TagAffinity extends Common {
     counter: number
 }
 
+export interface TagAffinityMap {
+    [tagId: number]: TagAffinity|undefined
+}
+
+export interface TagAffinityMapMap {
+    [tagId: number]: TagAffinityMap
+}
+
 export interface AvailabilityDate extends Tagged {
     dateStart: string
     dateEnd: string
@@ -84,6 +92,37 @@ export interface Scope extends Common {
     events: ScopeEvent[]
     weeks: ScopeSegment[]
     months: ScopeSegment[]
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Schedule Objects
+////////////////////////////////////////////////////////////////////////////////
+
+export interface ScheduleSlot extends Tagged {
+    isRequired: boolean
+    workerId?: number // 0 = Intentionally empty, undefined = Not evaluated
+}
+
+export interface ScheduleShift extends Tagged {
+    slots: ScheduleSlot[]
+}
+
+export interface ScheduleEvent extends Tagged {
+    calendarDate: string
+    shifts: ScheduleShift[]
+}
+
+export interface ScheduleStep {
+    id: number
+    sequence: number
+    eventId: number
+    shiftId: number
+    workerId?: number
+}
+
+export interface Schedule extends Common {
+    events: ScheduleEvent[]
+    steps: ScheduleStep[]
 }
 
 ////////////////////////////////////////////////////////////////////////////////

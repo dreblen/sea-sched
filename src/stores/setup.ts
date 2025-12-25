@@ -200,11 +200,11 @@ export const useSetupStore = defineStore('setup', () => {
     })
 
     const affinitiesByTagTag = computed(() => {
-        const r = {} as { [tagId: number]: { [tagId: number]: SeaSched.TagAffinity|undefined } }
+        const r = {} as SeaSched.TagAffinityMapMap
 
         // Populate a double-indexed list of mappings for each tag
         for (const t of tags.value) {
-            const map = {} as { [tagId: number]: SeaSched.TagAffinity|undefined }
+            const map = {} as SeaSched.TagAffinityMap
             for (const t2 of tags.value) {
                 map[t2.id] = affinitiesByTag.value[t.id]?.find((a) => (a.tagId1 === t.id && a.tagId2 === t2.id) || (a.tagId2 === t.id && a.tagId1 === t2.id))
             }
