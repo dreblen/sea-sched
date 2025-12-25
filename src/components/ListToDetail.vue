@@ -10,6 +10,7 @@ const props = defineProps<{
     items: Array<ListToDetailItem>
     vertical?: boolean
     itemTitle?: string
+    noActions?: boolean
 }>()
 
 const currentItemIds = ref<number[]>()
@@ -41,7 +42,7 @@ defineEmits({
         <v-row>
             <v-col cols="12" :md="(props.vertical) ? 12 : 3" :class="verticalPaddingClass">
                 <v-card variant="outlined">
-                    <v-card-actions>
+                    <v-card-actions v-if="!props.noActions">
                         <v-row>
                             <v-col class="pr-0">
                                 <v-btn block color="error" :disabled="!currentItem" @click="showConfirmationDialog = true">Remove</v-btn>

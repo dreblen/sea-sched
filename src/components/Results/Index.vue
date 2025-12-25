@@ -11,7 +11,7 @@ const results = useResultsStore()
 </script>
 
 <template>
-    <list-to-detail :items="results.schedules">
+    <list-to-detail :items="results.schedules" :no-actions="true">
         <template #default="{ item: schedule }">
             <template v-if="!schedule">
                 No schedule currently selected.
