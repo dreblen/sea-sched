@@ -98,9 +98,22 @@ export interface Scope extends Common {
 // Schedule Objects
 ////////////////////////////////////////////////////////////////////////////////
 
+export enum AssignmentAffinity {
+    Required = 1,
+    Preferred = 2,
+    Neutral = 3,
+    Unwanted = 4,
+}
+
+export interface EligibleWorker {
+    workerId: number
+    affinity: AssignmentAffinity
+}
+
 export interface ScheduleSlot extends Tagged {
     isRequired: boolean
     workerId?: number // 0 = Intentionally empty, undefined = Not evaluated
+    affinity?: AssignmentAffinity
 }
 
 export interface ScheduleShift extends Tagged {
@@ -120,9 +133,21 @@ export interface ScheduleStep {
     workerId?: number
 }
 
+export interface ScheduleGradeComponent {
+    name: string
+    weight: number
+    value: number
+}
+
+export interface ScheduleGrade {
+    overall: number
+    components: ScheduleGradeComponent[]
+}
+
 export interface Schedule extends Common {
     events: ScheduleEvent[]
     steps: ScheduleStep[]
+    grade?: ScheduleGrade
 }
 
 ////////////////////////////////////////////////////////////////////////////////

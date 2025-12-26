@@ -7,6 +7,7 @@ export interface InboundMessage {
     workers: SeaSched.Worker[]
     affinitiesByTagTag: SeaSched.TagAffinityMapMap
     permutationThreshold: number
+    overallGradeThreshold: number
     resultThreshold: number
 }
 
@@ -63,8 +64,9 @@ onmessage = function (ev) {
                 const gs = set[j] as util.GenerationSlot
 
                 let assignedWorkerId: number|undefined = undefined
-                const workerIds = util.getEligibleWorkersForSlot(gs, message.workers, message.affinitiesByTagTag)
-                if (workerIds.length > 0) {
+                let assignedAffinity: SeaSched.AssignmentAffinity|undefined = undefined
+                const eligible = util.getEligibleWorkersForSlot(gs, message.workers, message.affinitiesByTagTag)
+                if (eligible.length > 0) {
                     // Determine the lowest assignment count and any workers
                     // currently at that count
                     const lowestCount = slotCountsByWorker
@@ -77,7 +79,7 @@ onmessage = function (ev) {
                     // Try to assign to one of our low-count workers
                     const lowCountWorkerMatches = [] as number[]
                     for (const id of lowCountWorkerIds) {
-                        if (workerIds.includes(id)) {
+                        if (eligible.map((e) => e.workerId).includes(id)) {
                             lowCountWorkerMatches.push(id)
                         }
                     }
@@ -87,14 +89,18 @@ onmessage = function (ev) {
 
                     // Otherwise, pick one of our available workers
                     if (assignedWorkerId === undefined) {
-                        assignedWorkerId = workerIds[(seed + j) % workerIds.length]
+                        assignedWorkerId = eligible[(seed + j) % eligible.length]?.workerId
                     }
+
+                    // Store the calculated affinity no matter what
+                    assignedAffinity = eligible.find((e) => e.workerId === assignedWorkerId)?.affinity
                 } else {
                     assignedWorkerId = 0
                 }
 
                 // Finalize the assignment
                 gs.slot.workerId = assignedWorkerId
+                gs.slot.affinity = assignedAffinity
                 const sc = slotCountsByWorker.find((sc) => sc.workerId === assignedWorkerId)
                 if (sc) {
                     sc.count++
@@ -112,7 +118,11 @@ onmessage = function (ev) {
             shouldKeepResult = false
         }
 
-        // TODO: Grade and further qualify the schedule
+        // Grade and further qualify the schedule
+        schedule.grade = util.getScheduleGrade(schedule)
+        if (schedule.grade.overall < message.overallGradeThreshold) {
+            shouldKeepResult = false
+        }
 
         // Add the schedule to our result list if we still want to keep it
         if (shouldKeepResult) {

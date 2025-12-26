@@ -125,7 +125,8 @@ export function removeShiftSlot(events: GenericEvent[], eventId?: number, shiftI
 // Helpers for schedule generation
 ////////////////////////////////////////////////////////////////////////////////
 
-import type { ScopeEvent, Schedule, ScheduleEvent, ScheduleShift, ScheduleSlot, TagAffinityMapMap, Worker } from '@/types'
+import type { EligibleWorker, ScopeEvent, ScheduleGrade, Schedule, ScheduleEvent, ScheduleShift, ScheduleSlot, TagAffinityMapMap, Worker } from '@/types'
+import { AssignmentAffinity } from '@/types'
 import md5 from 'md5'
 
 // Create a new schedule object based on but distinct from an existing event
@@ -197,8 +198,10 @@ export function newGenerationSlots(events: ScopeEvent[]|ScheduleEvent[]) {
     return generationSlots
 }
 
-// Determine a prioritized list of workers who are able to fill a specified slot
-export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[], affinitiesByTagTag: TagAffinityMapMap) {
+// Determine a prioritized list of workers who are able to fill a specified
+// slot, along with an indicator of what affinity the workers in that list will
+// have with the slot
+export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[], affinitiesByTagTag: TagAffinityMapMap): EligibleWorker[] {
     const tags = [...new Set(gs.event.tags.concat(gs.shift.tags, gs.slot.tags))]
 
     const workersRequired = [] as number[]
@@ -269,15 +272,33 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[],
         }
     }
 
-    if (workersRequired.length > 0) {
-        return workersRequired
-    } else if (workersPreferred.length > 0) {
-        return workersPreferred
-    } else if (workersNeutral.length > 0) {
-        return workersNeutral
-    } else {
-        return workersUnwanted
+    // Return all possibilities, but with higher affinities first
+    const results = [] as EligibleWorker[]
+    for (const workerId of workersRequired) {
+        results.push({
+            workerId,
+            affinity: AssignmentAffinity.Required
+        })
     }
+    for (const workerId of workersPreferred) {
+        results.push({
+            workerId,
+            affinity: AssignmentAffinity.Preferred
+        })
+    }
+    for (const workerId of workersNeutral) {
+        results.push({
+            workerId,
+            affinity: AssignmentAffinity.Neutral
+        })
+    }
+    for (const workerId of workersUnwanted) {
+        results.push({
+            workerId,
+            affinity: AssignmentAffinity.Unwanted
+        })
+    }
+    return results
 }
 
 export function getScheduleHash(schedule: Schedule) {
@@ -294,4 +315,67 @@ export function getScheduleHash(schedule: Schedule) {
         }
     }
     return md5(JSON.stringify(assignments))
+}
+
+// Calculate a grade for a schedule based on its coverage and alignment with tag
+// affinity suggestions (affinity requirements are already considered during the
+// generation process).
+export function getScheduleGrade(schedule: Schedule) {
+    const grade: ScheduleGrade = {
+        overall: 0,
+        components: []
+    }
+
+    // Get generation slots for the schedule so it's easier to work with for
+    // aggregate calculations
+    const gss = newGenerationSlots(schedule.events)
+
+    // Slot coverage: What percentage of the total number of slots in the
+    // schedule have been filled?
+    const numSlots = gss.length
+    const numFilled = gss.filter((gs) => gs.slot.workerId !== undefined && gs.slot.workerId !== 0).length
+    grade.components.push({
+        name: 'Overall Slot Coverage',
+        weight: 75,
+        value: (100.0 * numFilled) / numSlots
+    })
+
+    // Slot affinity: Relative distribution of positive, neutral, and negative
+    // affinities between workers and events/shifts/slots at a basic level
+    // TODO: Improve this logic
+    let affinityBuffer = 0
+    for (const gs of gss) {
+        switch (gs.slot.affinity) {
+            case AssignmentAffinity.Required: {
+                affinityBuffer += 3
+                break
+            }
+            case AssignmentAffinity.Preferred: {
+                affinityBuffer += 2
+                break
+            }
+            case AssignmentAffinity.Neutral: {
+                affinityBuffer++
+                break
+            }
+            case AssignmentAffinity.Unwanted: {
+                affinityBuffer--
+                break
+            }
+        }
+    }
+    grade.components.push({
+        name: 'General Slot Affinity',
+        weight: 25,
+        value: (100.0 * affinityBuffer) / (numSlots)
+    })
+
+    // Determine overall grade from components
+    let buffer = 0
+    for (const component of grade.components) {
+        buffer += (component.weight / 100.0) * component.value
+    }
+    grade.overall = Math.min(100, buffer)
+
+    return grade
 }

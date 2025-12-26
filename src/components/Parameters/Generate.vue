@@ -104,11 +104,12 @@ async function generate() {
     const baseSchedule = util.newSchedule(eligibleEvents)
     const baseGenerationSlots = util.newGenerationSlots(baseSchedule.events)
     for (const slot of baseGenerationSlots) {
-        let workers = util.getEligibleWorkersForSlot(slot, setup.workers, setup.affinitiesByTagTag)
-        if (workers.length === 1) {
-            slot.slot.workerId = workers[0]
+        let eligible = util.getEligibleWorkersForSlot(slot, setup.workers, setup.affinitiesByTagTag)
+        if (eligible.length === 1) {
+            slot.slot.workerId = eligible[0]?.workerId
+            slot.slot.affinity = eligible[0]?.affinity
         }
-        if (workers.length === 0) {
+        if (eligible.length === 0) {
             slot.slot.workerId = 0
         }
     }
@@ -156,6 +157,7 @@ async function generate() {
             workers: setup.workers,
             affinitiesByTagTag: setup.affinitiesByTagTag,
             permutationThreshold: permutationThreshold.value / numThreads,
+            overallGradeThreshold: overallGradeThreshold.value,
             resultThreshold: resultThreshold.value
         }
         w.postMessage(JSON.stringify(message))

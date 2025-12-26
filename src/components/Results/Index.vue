@@ -17,6 +17,10 @@ const results = useResultsStore()
                 No schedule currently selected.
             </template>
             <template v-else>
+                <p>Overall Grade: {{ (schedule as Schedule).grade?.overall }}</p>
+                <p v-for="component of (schedule as Schedule).grade?.components" :key="component.name">
+                    Component "{{ component.name }}" (Weight = {{ component.weight }}): {{ component.value }}
+                </p>
                 <table>
                     <thead>
                         <tr>
