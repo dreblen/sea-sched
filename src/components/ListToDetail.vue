@@ -62,7 +62,11 @@ defineEmits({
                         max-height="70vh"
                         style="overflow-y: scroll"
                         @update:selected="$emit('change', currentItemId, currentItem ? ((currentItem as unknown) as { [propName: string]: string })[itemTitle || 'name'] : undefined)"
-                    />
+                    >
+                        <template v-if="$slots.append" #append="{ item }">
+                            <slot name="append" :item="item"></slot>
+                        </template>
+                    </v-list>
                 </v-card>
             </v-col>
             <v-col v-if="$slots.default" :class="verticalPaddingClass">

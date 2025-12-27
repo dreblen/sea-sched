@@ -21,14 +21,6 @@ const setup = useSetupStore()
 const parameters = useParametersStore()
 const results = useResultsStore()
 
-watchEffect(() => {
-    if (results.schedules.length > 0) {
-        emit('complete')
-    } else {
-        emit('incomplete')
-    }
-})
-
 // Create a disconnected list of our scope events with any missing shifts/slots
 // excluded. This doesn't need to be reactive, because it can't change here, and
 // it will be recreated each time this component loads.
@@ -116,10 +108,34 @@ async function generate() {
 
     // Generate schedules via worker threads
     const numThreads = 2
+    let completedThreads = 0
     for (let i = 0; i < numThreads; i++) {
         const w = new GenerationWorker()
         const dispose = function () {
             w.terminate()
+        }
+        const finish = function () {
+            // Sort our results to show higher grades first
+            results.schedules.sort((a, b) => {
+                if (a.grade?.overall !== undefined && b.grade?.overall === undefined) {
+                    return -1
+                }
+                if (a.grade?.overall === undefined && b.grade?.overall !== undefined) {
+                    return 1
+                }
+                if (a.grade?.overall === undefined && b.grade?.overall === undefined) {
+                    return 0
+                }
+                if ((a.grade?.overall as number) > (b.grade?.overall as number)) {
+                    return -1
+                }
+                if ((a.grade?.overall as number) < (b.grade?.overall as number)) {
+                    return 1
+                }
+                return 0
+            })
+
+            isGenerating.value = false
         }
         w.onmessage = (m) => {
             const message: OutboundMessage = m.data
@@ -140,14 +156,20 @@ async function generate() {
                             results.addSchedule(s)
                         }
                     }
-                    isGenerating.value = false
+                    completedThreads++
+                    if (completedThreads === numThreads) {
+                        finish()
+                    }
                     setTimeout(dispose, 5000)
                     break
                 }
             }
         }
         w.onerror = (err) => {
-            isGenerating.value = false
+            completedThreads++
+            if (completedThreads === numThreads) {
+                finish()
+            }
             setTimeout(dispose, 5000)
         }
 
@@ -163,6 +185,14 @@ async function generate() {
         w.postMessage(JSON.stringify(message))
     }
 }
+
+watchEffect(() => {
+    if (isGenerating.value === false && results.schedules.length > 0) {
+        emit('complete')
+    } else {
+        emit('incomplete')
+    }
+})
 </script>
 
 <template>

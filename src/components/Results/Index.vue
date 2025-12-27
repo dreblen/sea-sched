@@ -8,6 +8,18 @@ import ListToDetail from '../ListToDetail.vue'
 
 const setup = useSetupStore()
 const results = useResultsStore()
+
+function getColorForGrade(gradeValue?: number) {
+    if (gradeValue === undefined) {
+        return
+    } else if (gradeValue >= 90) {
+        return 'success'
+    } else if (gradeValue >= 70) {
+        return 'warning'
+    } else {
+        return 'error'
+    }
+}
 </script>
 
 <template>
@@ -42,6 +54,11 @@ const results = useResultsStore()
                     </tbody>
                 </table>
             </template>
+        </template>
+        <template #append="{ item }">
+            <v-chip :color="getColorForGrade((item as Schedule).grade?.overall)">
+                {{ (item as Schedule).grade?.overall }}
+            </v-chip>
         </template>
     </list-to-detail>
 </template>
