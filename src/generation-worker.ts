@@ -63,6 +63,12 @@ onmessage = function (ev) {
             for (let j = 0; j< set.length; j++) {
                 const gs = set[j] as util.GenerationSlot
 
+                // If this slot already had an assignment in the base schedule,
+                // keep it and move on
+                if (gs.slot.workerId !== undefined) {
+                    continue
+                }
+
                 let assignedWorkerId: number|undefined = undefined
                 let assignedAffinity: SeaSched.AssignmentAffinity|undefined = undefined
                 const eligible = util.getEligibleWorkersForSlot(gs, message.workers, message.affinitiesByTagTag)
