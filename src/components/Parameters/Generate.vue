@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, watchEffect } from 'vue'
+import { ref, nextTick, watchEffect, onBeforeUnmount } from 'vue'
 
 import type * as SeaSched from '@/types'
 
@@ -83,9 +83,15 @@ const resultThreshold = ref(25)
 
 const isGenerating = ref(false)
 const generationProgress = ref(0)
+const isCancelling = ref(false)
+const threadDisposeMethods = ref<{(): void}[]>([])
+
 async function generate() {
+    // Reset our status indicators
     isGenerating.value = true
     generationProgress.value = 0
+    isCancelling.value = false
+    threadDisposeMethods.value = []
     await nextTick()
 
     // Clear out any previous results
@@ -111,9 +117,12 @@ async function generate() {
     let completedThreads = 0
     for (let i = 0; i < numThreads; i++) {
         const w = new GenerationWorker()
+
         const dispose = function () {
             w.terminate()
         }
+        threadDisposeMethods.value.push(dispose)
+
         const finish = function () {
             // Sort our results to show higher grades first
             results.schedules.sort((a, b) => {
@@ -137,6 +146,7 @@ async function generate() {
 
             isGenerating.value = false
         }
+
         w.onmessage = (m) => {
             const message: OutboundMessage = m.data
             switch (message.type) {
@@ -165,6 +175,7 @@ async function generate() {
                 }
             }
         }
+
         w.onerror = (err) => {
             completedThreads++
             if (completedThreads === numThreads) {
@@ -185,6 +196,23 @@ async function generate() {
         w.postMessage(JSON.stringify(message))
     }
 }
+
+function cancel() {
+    isCancelling.value = true
+
+    for (const dispose of threadDisposeMethods.value) {
+        dispose()
+    }
+
+    isGenerating.value = false
+    isCancelling.value = false
+}
+
+onBeforeUnmount(() => {
+    if (isGenerating.value === true && isCancelling.value === false) {
+        cancel()
+    }
+})
 
 watchEffect(() => {
     if (isGenerating.value === false && results.schedules.length > 0) {
@@ -247,6 +275,18 @@ watchEffect(() => {
                         :max="permutationThreshold"
                     />
                 </template>
+            </v-btn>
+        </v-col>
+    </v-row>
+    <v-row v-if="isGenerating" justify="center">
+        <v-col class="flex-grow-0 flex-shrink-1">
+            <v-btn
+                color="error"
+                @click="cancel"
+                :disabled="isCancelling"
+                :loading="isCancelling"
+            >
+                Cancel Generation
             </v-btn>
         </v-col>
     </v-row>
