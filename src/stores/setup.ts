@@ -16,6 +16,14 @@ export const useSetupStore = defineStore('setup', () => {
 
     const events = useLocalStorage('setup-events',[] as SeaSched.Event[])
 
+    function serializeEvents() {
+        return JSON.stringify(events.value)
+    }
+
+    function deserializeEvents(json: string) {
+        events.value = JSON.parse(json)
+    }
+
     function addEvent() {
         const newEvent = util.addEvent(events.value)
         newEvent.recurrences = []
@@ -79,6 +87,14 @@ export const useSetupStore = defineStore('setup', () => {
     const workers = useLocalStorage('setup-workers', [] as SeaSched.Worker[])
     const maxWorkerId = computed(() => workers.value.reduce((p, c) => (p > c.id) ? p : c.id, 0))
 
+    function serializeWorkers() {
+        return JSON.stringify(workers.value)
+    }
+
+    function deserializeWorkers(json: string) {
+        workers.value = JSON.parse(json)
+    }
+
     function addWorker() {
         workers.value.push({
             id: maxWorkerId.value + 1,
@@ -138,6 +154,14 @@ export const useSetupStore = defineStore('setup', () => {
     const tags = useLocalStorage('setup-tags', [] as SeaSched.Tag[])
     const maxTagId = computed(() => tags.value.reduce((p, c) => (p > c.id) ? p : c.id, 0))
 
+    function serializeTags() {
+        return JSON.stringify(tags.value)
+    }
+
+    function deserializeTags(json: string) {
+        tags.value = JSON.parse(json)
+    }
+
     function addTag() {
         tags.value.push({
             id: maxTagId.value + 1,
@@ -179,6 +203,14 @@ export const useSetupStore = defineStore('setup', () => {
 
     const tagAffinities = useLocalStorage('setup-tag-affinities', [] as SeaSched.TagAffinity[])
     const maxTagAffinityId = computed(() => tagAffinities.value.reduce((p, c) => (p > c.id) ? p : c.id, 0))
+
+    function serializeTagAffinities() {
+        return JSON.stringify(tagAffinities.value)
+    }
+
+    function deserializeTagAffinities(json: string) {
+        tagAffinities.value = JSON.parse(json)
+    }
 
     const affinitiesByTag = computed(() => {
         const r = {} as { [tagId: number]: SeaSched.TagAffinity[] }
@@ -230,8 +262,39 @@ export const useSetupStore = defineStore('setup', () => {
         tagAffinities.value = tagAffinities.value.filter((a) => a.id !== id)
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    // General
+    ////////////////////////////////////////////////////////////////////////////
+
+    function serialize() {
+        const parts = {
+            events: serializeEvents(),
+            workers: serializeWorkers(),
+            tags: serializeTags(),
+            tagAffinities: serializeTagAffinities(),
+        }
+
+        return JSON.stringify(parts)
+    }
+
+    function deserialize(json: string) {
+        const parts = JSON.parse(json) as {
+            events: string
+            workers: string
+            tags: string
+            tagAffinities: string
+        }
+
+        deserializeEvents(parts.events)
+        deserializeWorkers(parts.workers)
+        deserializeTags(parts.tags)
+        deserializeTagAffinities(parts.tagAffinities)
+    }
+
     return {
         events,
+        serializeEvents,
+        deserializeEvents,
         addEvent,
         removeEvent,
         addEventShift,
@@ -241,17 +304,25 @@ export const useSetupStore = defineStore('setup', () => {
         addEventRecurrence,
         removeEventRecurrence,
         workers,
+        serializeWorkers,
+        deserializeWorkers,
         addWorker,
         removeWorker,
         addWorkerUnvailableDate,
         removeWorkerUnavailableDate,
         tags,
+        serializeTags,
+        deserializeTags,
         addTag,
         removeTag,
         tagAffinities,
         affinitiesByTag,
         affinitiesByTagTag,
+        serializeTagAffinities,
+        deserializeTagAffinities,
         addTagAffinity,
         removeTagAffinity,
+        serialize,
+        deserialize,
     }
 })

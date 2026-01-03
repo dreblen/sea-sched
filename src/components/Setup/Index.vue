@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import Events from './Events.vue'
 import Workers from './Workers.vue'
 import Tags from './Tags.vue'
+import ImportExport from './ImportExport.vue'
 
 // Prep our list of sub-navigation options for this tab
 const currentTab = ref(0)
@@ -11,7 +12,7 @@ const tabs = [
     { name: 'Events', component: Events },
     { name: 'Workers', component: Workers },
     { name: 'Tags', component: Tags },
-    { name: 'Import/Export' },
+    { name: 'Import/Export', component: ImportExport },
 ]
 </script>
 
@@ -25,9 +26,6 @@ const tabs = [
         <v-tabs-window-item v-for="tab in tabs">
             <template v-if="tab.component">
                 <component :is="tab.component"></component>
-            </template>
-            <template v-else>
-                Placeholder for {{ tab.name }}
             </template>
         </v-tabs-window-item>
     </v-tabs-window>
