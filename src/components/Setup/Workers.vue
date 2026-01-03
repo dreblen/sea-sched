@@ -220,6 +220,12 @@ const tagLogicOptions = [
                                             hint="No Selection = Apply to All in Range"
                                         />
                                     </v-col>
+                                    <v-col cols="12">
+                                        <v-textarea
+                                            v-model="(unavailableDate.item as AvailabilityDate).notes"
+                                            label="Notes"
+                                        />
+                                    </v-col>
                                 </v-row>
                             </template>
                         </template>

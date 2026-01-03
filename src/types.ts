@@ -34,6 +34,7 @@ export interface AvailabilityDate extends Tagged {
     dateStart: string
     dateEnd: string
     tagLogic: 'any'|'all'
+    notes: string
 }
 
 export interface Worker extends Tagged {

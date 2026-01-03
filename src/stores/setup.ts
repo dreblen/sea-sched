@@ -130,7 +130,8 @@ export const useSetupStore = defineStore('setup', () => {
             tags: [],
             dateStart: d,
             dateEnd: d,
-            tagLogic: 'any'
+            tagLogic: 'any',
+            notes: ''
         })
     }
 
