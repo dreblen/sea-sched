@@ -204,6 +204,7 @@ export function newGenerationSlots(events: ScopeEvent[]|ScheduleEvent[]) {
 export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[], affinitiesByTagTag: TagAffinityMapMap): EligibleWorker[] {
     const tags = [...new Set(gs.event.tags.concat(gs.shift.tags, gs.slot.tags))]
 
+    const workersDisallowed = [] as number[]
     const workersRequired = [] as number[]
     const workersPreferred = [] as number[]
     const workersNeutral = [] as number[]
@@ -249,6 +250,7 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[],
                     // If there is a negative, required affinity, exclude the
                     // worker from consideration for this slot
                     else {
+                        workersDisallowed.push(worker.id)
                         continue
                     }
                 }
@@ -275,24 +277,40 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[],
     // Return all possibilities, but with higher affinities first
     const results = [] as EligibleWorker[]
     for (const workerId of workersRequired) {
+        if (workersDisallowed.includes(workerId)) {
+            continue
+        }
+
         results.push({
             workerId,
             affinity: AssignmentAffinity.Required
         })
     }
     for (const workerId of workersPreferred) {
+        if (workersDisallowed.includes(workerId)) {
+            continue
+        }
+        
         results.push({
             workerId,
             affinity: AssignmentAffinity.Preferred
         })
     }
     for (const workerId of workersNeutral) {
+        if (workersDisallowed.includes(workerId)) {
+            continue
+        }
+        
         results.push({
             workerId,
             affinity: AssignmentAffinity.Neutral
         })
     }
     for (const workerId of workersUnwanted) {
+        if (workersDisallowed.includes(workerId)) {
+            continue
+        }
+        
         results.push({
             workerId,
             affinity: AssignmentAffinity.Unwanted
