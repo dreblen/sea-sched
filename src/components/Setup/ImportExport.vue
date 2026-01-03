@@ -68,5 +68,23 @@ function copyFullExportToClipboard() {
                 />
             </v-col>
         </v-row>
+        <v-row>
+            <v-col cols="12">
+                <h1 class="text-h4">Reset</h1>
+                <p>
+                    Warning: This will remove all current configuration data
+                    without replacing it with anything. If you want to keep your
+                    current configuration, please export it above first.
+                </p>
+            </v-col>
+            <v-col>
+                <v-btn
+                    color="error"
+                    @click="setup.reset"
+                >
+                    Reset Configuration
+                </v-btn>
+            </v-col>
+        </v-row>
     </v-container>
 </template>

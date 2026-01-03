@@ -291,6 +291,17 @@ export const useSetupStore = defineStore('setup', () => {
         deserializeTagAffinities(parts.tagAffinities)
     }
 
+    function reset() {
+        const empty = JSON.stringify([])
+
+        deserialize(JSON.stringify({
+            events: empty,
+            workers: empty,
+            tags: empty,
+            tagAffinities: empty,
+        }))
+    }
+
     return {
         events,
         serializeEvents,
@@ -324,5 +335,6 @@ export const useSetupStore = defineStore('setup', () => {
         removeTagAffinity,
         serialize,
         deserialize,
+        reset,
     }
 })
