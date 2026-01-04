@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import type { Schedule } from '@/types'
 
 import { useSetupStore } from '@/stores/setup'
@@ -20,6 +22,22 @@ function getColorForGrade(gradeValue?: number) {
         return 'error'
     }
 }
+
+const uniqueShiftNames = computed(() => {
+    const names = [] as string[]
+    
+    if (results.schedules.length > 0) {
+        for (const event of (results.schedules[0] as Schedule).events) {
+            for (const shift of event.shifts) {
+                if (!names.includes(shift.name)) {
+                    names.push(shift.name)
+                }
+            }
+        }
+    }
+
+    return names
+})
 </script>
 
 <template>
@@ -37,16 +55,16 @@ function getColorForGrade(gradeValue?: number) {
                     <thead>
                         <tr>
                             <th>Event</th>
-                            <th v-for="shift in (schedule as Schedule).events[0]?.shifts" :key="shift.id">
-                                {{ shift.name }}
+                            <th v-for="name in uniqueShiftNames" :key="name">
+                                {{ name }}
                             </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="event in (schedule as Schedule).events" :key="event.id">
                             <td>{{ event.name }}</td>
-                            <td v-for="shift in event.shifts" :key="shift.id">
-                                <p v-for="slot in shift.slots" :key="slot.id">
+                            <td v-for="name in uniqueShiftNames" :key="name">
+                                <p v-for="slot in event.shifts.find((s) => s.name === name)?.slots" :key="slot.id">
                                     {{ slot.name }}: {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
                                 </p>
                             </td>
