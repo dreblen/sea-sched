@@ -6,6 +6,7 @@ export interface InboundMessage {
     events: SeaSched.ScheduleEvent[]
     workers: SeaSched.Worker[]
     affinitiesByTagTag: SeaSched.TagAffinityMapMap
+    isStopShort: boolean
     isComprehensive: boolean
     permutationThreshold: number
     overallGradeThreshold: number
@@ -178,9 +179,23 @@ onmessage = function (ev) {
             scheduleHashes.push(hash)
         }
 
-        // Stop generating if we've reached our qualified result limit
+        // If we've reached our qualified result limit, either stop generating
+        // or push out the current lowest grade
         if (schedules.length >= message.resultThreshold) {
-            break
+            if (message.isStopShort) {
+                break
+            } else {
+                schedules.sort((a,b) => {
+                    if ((a.grade?.overall || 0) > (b.grade?.overall || 0)) {
+                        return -1
+                    }
+                    if ((a.grade?.overall || 0) < (b.grade?.overall || 0)) {
+                        return 1
+                    }
+                    return 0
+                })
+                schedules.pop()
+            }
         }
 
         // Don't report progress for each cycle, but if we've hit a certain

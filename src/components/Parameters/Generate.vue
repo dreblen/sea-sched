@@ -75,6 +75,7 @@ const numWorkers = setup.workers.length
 const numPermutations = Math.pow(numWorkers + 1, numSlots)
 
 // Basic generation controls
+const isStopShort = ref(true)
 const isComprehensive = ref(false)
 const permutationThreshold = ref(1000000)
 const overallGradeThreshold = ref(90)
@@ -82,6 +83,7 @@ const resultThreshold = ref(25)
 
 const isComprehensiveAllowed = computed(() => permutationThreshold.value >= numPermutations)
 const isComprehensiveForMessage = computed(() => isComprehensiveAllowed.value && isComprehensive.value)
+const isStopShortForMessage = computed(() => isStopShort.value && !isComprehensive.value)
 const permutationThresholdForMessage = computed(() => Math.min(permutationThreshold.value, numPermutations))
 
 const isGenerating = ref(false)
@@ -192,6 +194,7 @@ async function generate() {
             events: baseSchedule.events,
             workers: setup.workers,
             affinitiesByTagTag: setup.affinitiesByTagTag,
+            isStopShort: isStopShortForMessage.value,
             isComprehensive: isComprehensiveForMessage.value,
             permutationThreshold: Math.ceil(permutationThresholdForMessage.value / numThreads),
             overallGradeThreshold: overallGradeThreshold.value,
@@ -252,6 +255,19 @@ watchEffect(() => {
                 label="Maximum Generation Attempts"
                 :min="1"
             />
+        </v-col>
+        <v-col>
+            <v-switch
+                v-model="isStopShort"
+                :disabled="isComprehensiveForMessage"
+                color="primary"
+                hint="If yes, stop generating schedules after reaching the target amount at the target grade, even if not the highest possible grade"
+                persistent-hint
+            >
+                <template #label>
+                    Stop Short: {{ isStopShort ? 'Yes' : 'No' }}
+                </template>
+            </v-switch>
         </v-col>
         <v-col>
             <v-switch
