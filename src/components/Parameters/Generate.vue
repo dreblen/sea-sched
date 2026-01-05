@@ -310,7 +310,7 @@ watchEffect(() => {
                 <template #loader>
                     <v-progress-linear
                         v-model="generationProgress"
-                        :max="permutationThreshold"
+                        :max="permutationThresholdForMessage"
                     />
                 </template>
             </v-btn>
