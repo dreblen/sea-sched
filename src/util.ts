@@ -397,3 +397,55 @@ export function getScheduleGrade(schedule: Schedule) {
 
     return grade
 }
+
+// Convert a base-10 number into an array of digits representing a number of an
+// arbitrary base. Example: original = 10, base = 2 returns [1,0,1,0]. This is
+// used for comprehensive schedule generation to convert a single seed number
+// into usable slot assignments.
+export function getBase10toBaseX(original: number, base: number, arrayPadding?: number) {
+    // Determine the highest power we need to work with
+    let topPower = 0
+    for (let i = 0; ; i++) {
+        if (Math.pow(base, i) > original) {
+            topPower = i - 1
+            break
+        }
+    }
+
+    // Iterate down from the highest power, reducing our accumulator
+    const results = [] as number[]
+    let balance = original
+    for (let i = topPower; i >= 0; i--) {
+        for (let j = 0; j < base; j++) {
+            // If this power is higher than the remaining balance on its own,
+            // skip it and move down
+            if (Math.pow(base, i) > balance) {
+                results.push(0)
+                break
+            }
+
+            // Otherwise, calculat our limit within this power
+            const p = j * Math.pow(base, i)
+
+            if (p > balance) {
+                results.push(j - 1)
+                balance -= (j - 1) * Math.pow(base, i)
+                break
+            } else if (j === base - 1) {
+                results.push(j)
+                balance -= p
+                break
+            }
+        }
+    }
+
+    // Pad the results as needed
+    if (arrayPadding !== undefined) {
+        const diff = arrayPadding - results.length
+        for (let i = 0; i < diff; i++) {
+            results.unshift(0)
+        }
+    }
+
+    return results
+}

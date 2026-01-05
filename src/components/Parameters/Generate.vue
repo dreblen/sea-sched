@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, watchEffect, onBeforeUnmount } from 'vue'
+import { ref, nextTick, watchEffect, onBeforeUnmount, computed } from 'vue'
 
 import type * as SeaSched from '@/types'
 
@@ -74,12 +74,15 @@ const numSlots = eligibleEvents.reduce((acc,e) => acc + e.shifts.reduce((acc, s)
 const numWorkers = setup.workers.length
 const numPermutations = Math.pow(numWorkers + 1, numSlots)
 
-// TODO: If permutation threshold is <= total number of permutations, then
-// follow a mathematically complete generation scheme instead of the usual
-// prefiltered one.
+// Basic generation controls
+const isComprehensive = ref(false)
 const permutationThreshold = ref(1000000)
 const overallGradeThreshold = ref(90)
 const resultThreshold = ref(25)
+
+const isComprehensiveAllowed = computed(() => permutationThreshold.value >= numPermutations)
+const isComprehensiveForMessage = computed(() => isComprehensiveAllowed.value && isComprehensive.value)
+const permutationThresholdForMessage = computed(() => Math.min(permutationThreshold.value, numPermutations))
 
 const isGenerating = ref(false)
 const generationProgress = ref(0)
@@ -185,11 +188,12 @@ async function generate() {
         }
 
         const message: InboundMessage = {
-            seed: (permutationThreshold.value / numThreads) * i,
+            seed: Math.ceil(permutationThresholdForMessage.value / numThreads) * i,
             events: baseSchedule.events,
             workers: setup.workers,
             affinitiesByTagTag: setup.affinitiesByTagTag,
-            permutationThreshold: permutationThreshold.value / numThreads,
+            isComprehensive: isComprehensiveForMessage.value,
+            permutationThreshold: Math.ceil(permutationThresholdForMessage.value / numThreads),
             overallGradeThreshold: overallGradeThreshold.value,
             resultThreshold: resultThreshold.value
         }
@@ -248,6 +252,24 @@ watchEffect(() => {
                 label="Maximum Generation Attempts"
                 :min="1"
             />
+        </v-col>
+        <v-col>
+            <v-switch
+                v-model="isComprehensive"
+                :disabled="!isComprehensiveAllowed"
+                color="primary"
+                hint="Comprehensive generation method only possible when max generation attempts >= total possible permutations"
+                persistent-hint
+            >
+                <template #label>
+                    <template v-if="isComprehensive">
+                        Comprehensive
+                    </template>
+                    <template v-else>
+                        Best Effort
+                    </template>
+                </template>
+            </v-switch>
         </v-col>
         <v-col>
             <v-number-input
