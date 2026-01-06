@@ -218,6 +218,7 @@ const tagLogicOptions = [
                                             v-model="(unavailableDate.item as AvailabilityDate).tags"
                                             label="...Of These Tags"
                                             hint="No Selection = Apply to All in Range"
+                                            include-system
                                         />
                                     </v-col>
                                     <v-col cols="12">

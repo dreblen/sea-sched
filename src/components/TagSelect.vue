@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { TagType } from '@/types'
+
 import { useSetupStore } from '@/stores/setup'
 
 const setup = useSetupStore()
 
 const model = defineModel<number[]>()
 const props = defineProps<{
+    includeSystem?: boolean
     label?: string
     hint?: string
 }>()
@@ -13,7 +16,7 @@ const props = defineProps<{
 <template>
     <v-combobox
         v-model="model"
-        :items="setup.tags"
+        :items="setup.tags.filter((t) => includeSystem || t.type === TagType.Custom)"
         item-title="name"
         item-value="id"
         :return-object="false"
