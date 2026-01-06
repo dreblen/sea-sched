@@ -29,29 +29,37 @@ export const useSetupStore = defineStore('setup', () => {
         const newEvent = util.addEvent(events.value)
         newEvent.recurrences = []
 
-        syncSystemTags()
+        syncSystemTags(TagType.Event)
     }
 
     function removeEvent(id?: number) {
         events.value = (util.removeEvent(events.value, id) as SeaSched.Event[])
 
-        syncSystemTags()
+        syncSystemTags(TagType.Event)
     }
 
     function addEventShift(eventId: number) {
         util.addEventShift(events.value, eventId)
+
+        syncSystemTags(TagType.Shift)
     }
 
     function removeEventShift(eventId?: number, shiftId?: number) {
         util.removeEventShift(events.value, eventId, shiftId)
+
+        syncSystemTags(TagType.Shift)
     }
 
     function addShiftSlot(eventId: number, shiftId: number) {
         util.addShiftSlot(events.value, eventId, shiftId)
+
+        syncSystemTags(TagType.Slot)
     }
 
     function removeShiftSlot(eventId?: number, shiftId?: number, slotId?: number) {
         util.removeShiftSlot(events.value, eventId, shiftId, slotId)
+
+        syncSystemTags(TagType.Slot)
     }
 
     function addEventRecurrence(eventId: number) {
@@ -206,42 +214,87 @@ export const useSetupStore = defineStore('setup', () => {
         tags.value = tags.value.filter((t) => t.id !== id)
     }
 
-    function syncSystemTags() {
-        // Get current list of unique event names and event tag names
-        const eventNames = [...new Set(events.value.map((e) => e.name))]
-        const eventTagNames = [...new Set(tags.value.filter((t) => t.type === TagType.Event).map((t) => t.name))]
-        const matches = eventNames.filter((en) => eventTagNames.find((tn) => tn === `Event: ${en}`))
+    function syncSystemTags(type: TagType) {
+        // We will apply nearly identical logic for events, shifts, and slots,
+        // so we just need to apply a few key decision points. We start by
+        // establishing context for the appropriate type.
+        const tagNames = [...new Set(tags.value.filter((t) => t.type === type).map((t) => t.name))]
+        let names = [] as string[]
+        let prefix = ''
+        switch (type) {
+            case TagType.Event: {
+                names = [...new Set(events.value.map((e) => e.name))]
+                prefix = 'Event: '
+                break
+            }
+            case TagType.Shift: {
+                names = [...new Set(events.value.map((e) => e.shifts.map((s) => s.name)).flat())]
+                prefix = 'Shift: '
+                break
+            }
+            case TagType.Slot: {
+                names = [...new Set(events.value.map((e) => e.shifts.map((s) => s.slots.map((l) => l.name))).flat(2))]
+                prefix = 'Slot: '
+                break
+            }
+            default:
+                return
+        }
+        const matches = names.filter((n) => tagNames.find((tn) => tn === `${prefix}${n}`))
 
-        // If there are more event names than tag names, we have added an event
-        // and need to add a corresponding tag
-        if (eventNames.length > eventTagNames.length) {
-            for (const eventName of eventNames) {
-                if (matches.includes(eventName)) {
+        // If there are more object names than tag names, we have added an
+        // object and need to add a corresponding tag
+        if (names.length > tagNames.length) {
+            for (const name of names) {
+                if (matches.includes(name)) {
                     continue
                 }
 
-                const tag = addTag(TagType.Event)
-                tag.name = `Event: ${eventName}`
+                const tag = addTag(type)
+                tag.name = `${prefix}${name}`
 
-                for(const event of events.value.filter((e) => e.name === eventName)) {
-                    event.tags.push(tag.id)
+                switch (type) {
+                    case TagType.Event: {
+                        for(const event of events.value.filter((e) => e.name === name)) {
+                            event.tags.push(tag.id)
+                        }
+                        break
+                    }
+                    case TagType.Shift: {
+                        for (const event of events.value) {
+                            for (const shift of event.shifts.filter((s) => s.name === name)) {
+                                shift.tags.push(tag.id)
+                            }
+                        }
+                        break
+                    }
+                    case TagType.Slot: {
+                        for (const event of events.value) {
+                            for (const shift of event.shifts) {
+                                for (const slot of shift.slots.filter((l) => l.name === name)) {
+                                    slot.tags.push(tag.id)
+                                }
+                            }
+                        }
+                        break
+                    }
                 }
 
-                matches.push(eventName)
-                eventTagNames.push(tag.name)
+                matches.push(name)
+                tagNames.push(tag.name)
             }
         }
 
-        // If there are more tag names than event names, we have removed an
-        // event and need to remove a corresponding tag
-        if (eventTagNames.length > eventNames.length) {
-            for (const eventTagName of eventTagNames) {
-                const simpleName = eventTagName.substring('Event: '.length)
+        // If there are more tag names than object names, we have removed an
+        // object and need to remove a corresponding tag
+        if (tagNames.length > names.length) {
+            for (const tagName of tagNames) {
+                const simpleName = tagName.substring(prefix.length)
                 if (matches.includes(simpleName)) {
                     continue
                 }
 
-                const tag = tags.value.find((t) => t.type === TagType.Event && t.name === eventTagName)
+                const tag = tags.value.find((t) => t.type === type && t.name === tagName)
                 if (tag === undefined) {
                     continue
                 }
@@ -250,41 +303,81 @@ export const useSetupStore = defineStore('setup', () => {
             }
         }
 
-        // If there are the same number of event names and tag names, either
-        // nothing has changed and this is a no-op, or we have renamed an event
+        // If there are the same number of object names and tag names, either
+        // nothing has changed and this is a no-op, or we have renamed an object
         // and need to rename the unmatched tag. We handle the no-op with a
         // check of matches length, so this block is to handle renaming.
-        if (eventNames.length === eventTagNames.length && matches.length !== eventNames.length) {
-            const unmatchedEventNames = eventNames.filter((n) => !matches.includes(n))
-            const unmatchedEventTagNames = eventTagNames.filter((n) => !matches.includes(n.substring('Event: '.length)))
+        if (names.length === tagNames.length && matches.length !== names.length) {
+            const unmatchedNames = names.filter((n) => !matches.includes(n))
+            const unmatchedTagNames = tagNames.filter((n) => !matches.includes(n.substring(prefix.length)))
 
-            if (unmatchedEventNames.length !== 1 || unmatchedEventTagNames.length !== 1) {
+            if (unmatchedNames.length !== 1 || unmatchedTagNames.length !== 1) {
                 // TODO: This shouldn't ever happen; not sure how to respond
                 return
             }
 
-            const tag = tags.value.find((t) => t.type === TagType.Event && t.name === unmatchedEventTagNames[0])
+            const tag = tags.value.find((t) => t.type === type && t.name === unmatchedTagNames[0])
             if (tag) {
-                tag.name = `Event: ${unmatchedEventNames[0]}`
+                tag.name = `${prefix}${unmatchedNames[0]}`
             }
         }
 
-        // Make sure all events are tagged appropriately
+        // Make sure all objects are tagged appropriately
         for (const event of events.value) {
-            const tag = tags.value.find((t) => t.type == TagType.Event && t.name === `Event: ${event.name}`)
-            if (tag === undefined) {
-                continue
-            }
+            if (type === TagType.Event) {
+                const tag = tags.value.find((t) => t.type == type && t.name === `${prefix}${event.name}`)
+                if (tag === undefined) {
+                    continue
+                }
 
-            // Remove any event tags that aren't correct
-            event.tags = event.tags.filter((id) => {
-                const t = tags.value.find((t) => t.id === id)
-                return t?.type !== TagType.Event || t.id === tag.id
-            })
+                // Remove any event tags that aren't correct
+                event.tags = event.tags.filter((id) => {
+                    const t = tags.value.find((t) => t.id === id)
+                    return t?.type !== type || t.id === tag.id
+                })
 
-            // Add the correct tag if needed
-            if (!event.tags.includes(tag.id)) {
-                event.tags.push(tag.id)
+                // Add the correct tag if needed
+                if (!event.tags.includes(tag.id)) {
+                    event.tags.push(tag.id)
+                }
+            } else {
+                for (const shift of event.shifts) {
+                    if (type === TagType.Shift) {
+                        const tag = tags.value.find((t) => t.type == type && t.name === `${prefix}${shift.name}`)
+                        if (tag === undefined) {
+                            continue
+                        }
+
+                        // Remove any shift tags that aren't correct
+                        shift.tags = shift.tags.filter((id) => {
+                            const t = tags.value.find((t) => t.id === id)
+                            return t?.type !== type || t.id === tag.id
+                        })
+
+                        // Add the correct tag if needed
+                        if (!shift.tags.includes(tag.id)) {
+                            shift.tags.push(tag.id)
+                        }
+                    } else {
+                        for (const slot of shift.slots) {
+                            const tag = tags.value.find((t) => t.type == type && t.name === `${prefix}${slot.name}`)
+                            if (tag === undefined) {
+                                continue
+                            }
+
+                            // Remove any slot tags that aren't correct
+                            slot.tags = slot.tags.filter((id) => {
+                                const t = tags.value.find((t) => t.id === id)
+                                return t?.type !== type || t.id === tag.id
+                            })
+
+                            // Add the correct tag if needed
+                            if (!slot.tags.includes(tag.id)) {
+                                slot.tags.push(tag.id)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -2,6 +2,8 @@
 import type { GenericEvent, GenericShift, GenericSlot } from '@/types'
 import type { EventManagementStore } from '@/util'
 
+import { TagType } from '@/types'
+
 import ListToDetail from './ListToDetail.vue'
 import TagSelect from './TagSelect.vue'
 
@@ -14,9 +16,9 @@ defineEmits({
     changeEvents(id?: number, name?: string) { return true }
 })
 
-function onNameChange() {
+function onNameChange(type: TagType) {
     if (props.store.syncSystemTags !== undefined) {
-        props.store.syncSystemTags()
+        props.store.syncSystemTags(type)
     }
 }
 </script>
@@ -35,7 +37,7 @@ function onNameChange() {
         <template v-else>
             <v-row>
                 <v-col>
-                    <v-text-field label="Name" v-model="event.name" @update:model-value="onNameChange"></v-text-field>
+                    <v-text-field label="Name" v-model="event.name" @update:model-value="onNameChange(TagType.Event)"></v-text-field>
                 </v-col>
                 <v-col>
                     <tag-select v-model="(event as GenericEvent).tags" />
@@ -53,7 +55,7 @@ function onNameChange() {
                             <template v-else>
                                 <v-row>
                                     <v-col>
-                                        <v-text-field label="Name" v-model="shift.name"></v-text-field>
+                                        <v-text-field label="Name" v-model="shift.name" @update:model-value="onNameChange(TagType.Shift)"></v-text-field>
                                     </v-col>
                                     <v-col>
                                         <tag-select v-model="(shift as GenericShift).tags" />
@@ -71,7 +73,7 @@ function onNameChange() {
                                                 <template v-else>
                                                     <v-row>
                                                         <v-col>
-                                                            <v-text-field label="Name" v-model="slot.name"></v-text-field>
+                                                            <v-text-field label="Name" v-model="slot.name" @update:model-value="onNameChange(TagType.Slot)"></v-text-field>
                                                         </v-col>
                                                         <v-col>
                                                             <tag-select v-model="(slot as GenericSlot).tags" />

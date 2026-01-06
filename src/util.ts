@@ -18,7 +18,7 @@ export function getDateString(date?: Date) {
 // Helpers for managing events in stores
 ////////////////////////////////////////////////////////////////////////////////
 
-import type { GenericEvent, GenericShift, GenericSlot } from '@/types'
+import type { GenericEvent, GenericShift, GenericSlot, TagType } from '@/types'
 
 export interface EventManagementStore {
     addEvent: { (): GenericEvent|void }
@@ -27,7 +27,7 @@ export interface EventManagementStore {
     removeEventShift: { (eventId?: number, shiftId?: number): void }
     addShiftSlot: { (eventId: number, shiftId: number): GenericSlot|void }
     removeShiftSlot: { (eventId?: number, shiftId?: number, slotId?: number): void }
-    syncSystemTags?: { (): void}
+    syncSystemTags?: { (type: TagType): void}
 }
 
 export function addEvent(events: GenericEvent[]) {
