@@ -7,7 +7,19 @@ interface Common {
 // Pre-Scope/Base Template
 ////////////////////////////////////////////////////////////////////////////////
 
+// Type allows us to distinguish between user-created and system-generated tags.
+// The system tags for event, shift, and slot allow the user to set affinity
+// with those entities easily without manually recreating the whole structure as
+// their own tags.
+export enum TagType {
+    Custom = 1,
+    Event = 2,
+    Shift = 3,
+    Slot = 4,
+}
+
 export interface Tag extends Common {
+    type: TagType
 }
 
 export interface Tagged extends Common {

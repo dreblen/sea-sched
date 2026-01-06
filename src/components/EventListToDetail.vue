@@ -13,6 +13,12 @@ const props = defineProps<{
 defineEmits({
     changeEvents(id?: number, name?: string) { return true }
 })
+
+function onNameChange() {
+    if (props.store.syncSystemTags !== undefined) {
+        props.store.syncSystemTags()
+    }
+}
 </script>
 
 <template>
@@ -29,7 +35,7 @@ defineEmits({
         <template v-else>
             <v-row>
                 <v-col>
-                    <v-text-field label="Name" v-model="event.name"></v-text-field>
+                    <v-text-field label="Name" v-model="event.name" @update:model-value="onNameChange"></v-text-field>
                 </v-col>
                 <v-col>
                     <tag-select v-model="(event as GenericEvent).tags" />

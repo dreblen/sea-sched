@@ -6,6 +6,7 @@ import { useParametersStore } from './parameters'
 import * as util from '@/util'
 
 import type * as SeaSched from '@/types'
+import { TagType } from '@/types'
 
 export const useSetupStore = defineStore('setup', () => {
     const parameters = useParametersStore()
@@ -27,10 +28,14 @@ export const useSetupStore = defineStore('setup', () => {
     function addEvent() {
         const newEvent = util.addEvent(events.value)
         newEvent.recurrences = []
+
+        syncSystemTags()
     }
 
     function removeEvent(id?: number) {
         events.value = (util.removeEvent(events.value, id) as SeaSched.Event[])
+
+        syncSystemTags()
     }
 
     function addEventShift(eventId: number) {
@@ -163,11 +168,14 @@ export const useSetupStore = defineStore('setup', () => {
         tags.value = JSON.parse(json)
     }
 
-    function addTag() {
-        tags.value.push({
+    function addTag(type?: SeaSched.TagType) {
+        const tag: SeaSched.Tag = {
             id: maxTagId.value + 1,
-            name: `New Tag ${maxTagId.value + 1}`
-        })
+            name: `New Tag ${maxTagId.value + 1}`,
+            type: type || TagType.Custom
+        }
+        tags.value.push(tag)
+        return tag
     }
 
     function removeTag(id?: number) {
@@ -196,6 +204,89 @@ export const useSetupStore = defineStore('setup', () => {
 
         // Remove the tag itself
         tags.value = tags.value.filter((t) => t.id !== id)
+    }
+
+    function syncSystemTags() {
+        // Get current list of unique event names and event tag names
+        const eventNames = [...new Set(events.value.map((e) => e.name))]
+        const eventTagNames = [...new Set(tags.value.filter((t) => t.type === TagType.Event).map((t) => t.name))]
+        const matches = eventNames.filter((en) => eventTagNames.find((tn) => tn === `Event: ${en}`))
+
+        // If there are more event names than tag names, we have added an event
+        // and need to add a corresponding tag
+        if (eventNames.length > eventTagNames.length) {
+            for (const eventName of eventNames) {
+                if (matches.includes(eventName)) {
+                    continue
+                }
+
+                const tag = addTag(TagType.Event)
+                tag.name = `Event: ${eventName}`
+
+                for(const event of events.value.filter((e) => e.name === eventName)) {
+                    event.tags.push(tag.id)
+                }
+
+                matches.push(eventName)
+                eventTagNames.push(tag.name)
+            }
+        }
+
+        // If there are more tag names than event names, we have removed an
+        // event and need to remove a corresponding tag
+        if (eventTagNames.length > eventNames.length) {
+            for (const eventTagName of eventTagNames) {
+                const simpleName = eventTagName.substring('Event: '.length)
+                if (matches.includes(simpleName)) {
+                    continue
+                }
+
+                const tag = tags.value.find((t) => t.type === TagType.Event && t.name === eventTagName)
+                if (tag === undefined) {
+                    continue
+                }
+
+                removeTag(tag.id)
+            }
+        }
+
+        // If there are the same number of event names and tag names, either
+        // nothing has changed and this is a no-op, or we have renamed an event
+        // and need to rename the unmatched tag. We handle the no-op with a
+        // check of matches length, so this block is to handle renaming.
+        if (eventNames.length === eventTagNames.length && matches.length !== eventNames.length) {
+            const unmatchedEventNames = eventNames.filter((n) => !matches.includes(n))
+            const unmatchedEventTagNames = eventTagNames.filter((n) => !matches.includes(n.substring('Event: '.length)))
+
+            if (unmatchedEventNames.length !== 1 || unmatchedEventTagNames.length !== 1) {
+                // TODO: This shouldn't ever happen; not sure how to respond
+                return
+            }
+
+            const tag = tags.value.find((t) => t.type === TagType.Event && t.name === unmatchedEventTagNames[0])
+            if (tag) {
+                tag.name = `Event: ${unmatchedEventNames[0]}`
+            }
+        }
+
+        // Make sure all events are tagged appropriately
+        for (const event of events.value) {
+            const tag = tags.value.find((t) => t.type == TagType.Event && t.name === `Event: ${event.name}`)
+            if (tag === undefined) {
+                continue
+            }
+
+            // Remove any event tags that aren't correct
+            event.tags = event.tags.filter((id) => {
+                const t = tags.value.find((t) => t.id === id)
+                return t?.type !== TagType.Event || t.id === tag.id
+            })
+
+            // Add the correct tag if needed
+            if (!event.tags.includes(tag.id)) {
+                event.tags.push(tag.id)
+            }
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -327,6 +418,7 @@ export const useSetupStore = defineStore('setup', () => {
         deserializeTags,
         addTag,
         removeTag,
+        syncSystemTags,
         tagAffinities,
         affinitiesByTag,
         affinitiesByTagTag,

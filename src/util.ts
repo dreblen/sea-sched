@@ -27,6 +27,7 @@ export interface EventManagementStore {
     removeEventShift: { (eventId?: number, shiftId?: number): void }
     addShiftSlot: { (eventId: number, shiftId: number): GenericSlot|void }
     removeShiftSlot: { (eventId?: number, shiftId?: number, slotId?: number): void }
+    syncSystemTags?: { (): void}
 }
 
 export function addEvent(events: GenericEvent[]) {
