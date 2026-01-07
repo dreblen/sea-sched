@@ -36,6 +36,8 @@ export const useSetupStore = defineStore('setup', () => {
         events.value = (util.removeEvent(events.value, id) as SeaSched.Event[])
 
         syncSystemTags(TagType.Event)
+        syncSystemTags(TagType.Shift)
+        syncSystemTags(TagType.Slot)
     }
 
     function addEventShift(eventId: number) {
@@ -48,6 +50,7 @@ export const useSetupStore = defineStore('setup', () => {
         util.removeEventShift(events.value, eventId, shiftId)
 
         syncSystemTags(TagType.Shift)
+        syncSystemTags(TagType.Slot)
     }
 
     function addShiftSlot(eventId: number, shiftId: number) {
