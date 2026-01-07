@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { TagAffinity } from '@/types'
+import type { Tag, TagAffinity } from '@/types'
+import { TagType } from '@/types'
 
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useSetupStore } from '@/stores/setup'
 
 import ListToDetail from '../ListToDetail.vue'
@@ -43,17 +44,46 @@ function onRelatedTagClick(tagId1: number, tagId2: number) {
         setup.removeTagAffinity(affinity.id)
     }
 }
+
+const isRemoveDisabled = ref(false)
+function onSelectedTagChange(id?: number) {
+    const tag = setup.tags.find((t) => t.id === id)
+    if (tag === undefined) {
+        return
+    }
+
+    isRemoveDisabled.value = tag.type !== TagType.Custom
+}
 </script>
 
 <template>
-    <list-to-detail :items="setup.tags" v-slot="tag" @add="setup.addTag" @remove="setup.removeTag">
+    <list-to-detail
+        :items="setup.tags"
+        v-slot="tag"
+        @add="setup.addTag"
+        @remove="setup.removeTag"
+        @change="onSelectedTagChange"
+        :disable-remove-action="isRemoveDisabled"
+    >
         <template v-if="!tag.item">
             No tag currently selected.
         </template>
         <template v-else>
+            <v-row v-if="(tag.item as Tag).type !== TagType.Custom">
+                <v-col>
+                    <p>
+                        Note: You cannot remove or rename this tag because it is
+                        automatically generated.
+                    </p>
+                </v-col>
+            </v-row>
             <v-row>
                 <v-col>
-                    <v-text-field label="Name" v-model="tag.item.name"></v-text-field>
+                    <v-text-field
+                        label="Name"
+                        v-model="tag.item.name"
+                        :disabled="(tag.item as Tag).type !== TagType.Custom"
+                    />
                 </v-col>
             </v-row>
             <v-row>

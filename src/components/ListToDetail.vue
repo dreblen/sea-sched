@@ -11,6 +11,7 @@ const props = defineProps<{
     vertical?: boolean
     itemTitle?: string
     noActions?: boolean
+    disableRemoveAction?: boolean
 }>()
 
 const currentItemIds = ref<number[]>()
@@ -45,7 +46,7 @@ defineEmits({
                     <v-card-actions v-if="!props.noActions">
                         <v-row>
                             <v-col class="pr-0">
-                                <v-btn block color="error" :disabled="!currentItem" @click="showConfirmationDialog = true">Remove</v-btn>
+                                <v-btn block color="error" :disabled="!currentItem || disableRemoveAction" @click="showConfirmationDialog = true">Remove</v-btn>
                             </v-col>
                             <v-col class="pl-0">
                                 <v-btn block color="success" @click="$emit('add')">Add</v-btn>
