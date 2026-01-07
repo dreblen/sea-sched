@@ -297,16 +297,6 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[],
             affinity: AssignmentAffinity.Preferred
         })
     }
-    for (const workerId of workersNeutral) {
-        if (workersDisallowed.includes(workerId)) {
-            continue
-        }
-        
-        results.push({
-            workerId,
-            affinity: AssignmentAffinity.Neutral
-        })
-    }
     for (const workerId of workersUnwanted) {
         if (workersDisallowed.includes(workerId)) {
             continue
@@ -315,6 +305,16 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[],
         results.push({
             workerId,
             affinity: AssignmentAffinity.Unwanted
+        })
+    }
+    for (const workerId of workersNeutral) {
+        if (workersDisallowed.includes(workerId)) {
+            continue
+        }
+        
+        results.push({
+            workerId,
+            affinity: AssignmentAffinity.Neutral
         })
     }
     return results

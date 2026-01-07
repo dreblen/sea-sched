@@ -64,14 +64,15 @@ onmessage = function (ev) {
                     continue
                 }
 
-                const validWorkers = util.getEligibleWorkersForSlot(gs, message.workers, message.affinitiesByTagTag)
-                    .map((ew) => ew.workerId)
-                if (!validWorkers.includes(workerId)) {
+                const eligibleWorker = util.getEligibleWorkersForSlot(gs, message.workers, message.affinitiesByTagTag)
+                    .find((ew) => ew.workerId === workerId)
+                if (eligibleWorker === undefined) {
                     gs.slot.workerId = 0
                     continue
                 }
 
                 gs.slot.workerId = workerId
+                gs.slot.affinity = eligibleWorker.affinity
             }
         }
         // Best-effort generation method
