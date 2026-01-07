@@ -16,10 +16,21 @@ defineEmits({
     changeEvents(id?: number, name?: string) { return true }
 })
 
+const nameChangeTimeoutIds: { [tagType: number]: number } = {}
 function onNameChange(type: TagType) {
-    if (props.store.syncSystemTags !== undefined) {
-        props.store.syncSystemTags(type)
+    // Clear any current sync pending for this type
+    if (nameChangeTimeoutIds[type] !== undefined) {
+        clearTimeout(nameChangeTimeoutIds[type])
+        delete nameChangeTimeoutIds[type]
     }
+
+    // If relevant, queue an update to our system tags to match with the new
+    // object name. We put this on a delay to debounce fast typing updates.
+    nameChangeTimeoutIds[type] = setTimeout(() => {
+        if (props.store.syncSystemTags !== undefined) {
+            props.store.syncSystemTags(type)
+        }
+    }, 500)
 }
 </script>
 
