@@ -29,7 +29,7 @@ const props = defineProps<{
         autocomplete="suppress"
     >
         <template #chip="{ props, item }">
-            <v-chip v-bind="props">
+            <v-chip v-if="includeSystem || item.raw.type === TagType.Custom" v-bind="props">
                 {{ item.title }}
             </v-chip>
         </template>
