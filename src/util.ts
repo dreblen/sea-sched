@@ -218,6 +218,58 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[],
             continue
         }
 
+        // Check the worker's unavailability
+        let isUnavailable = false
+        for (const unavailableDate of worker.unavailableDates) {
+            // If we have an answer already, don't proceed
+            if (isUnavailable) {
+                break
+            }
+
+            // If this event is outside the unavailability boundaries, skip it
+            if (gs.event.calendarDate < unavailableDate.dateStart || gs.event.calendarDate > unavailableDate.dateEnd) {
+                continue
+            }
+
+            // If the unavailability date has no tags, there is nothing further
+            // to check
+            if (unavailableDate.tags.length === 0) {
+                isUnavailable = true
+                break
+            }
+
+            // For dates inside the unavailability boundaries, test tags
+            let allMatched = true
+            for (const id of unavailableDate.tags) {
+                const tagMatch = tags.includes(id)
+
+                // When the tag logic allows for any match, we have an answer
+                // after the first positive check
+                if (unavailableDate.tagLogic === 'any' && tagMatch) {
+                    isUnavailable = true
+                    break
+                }
+
+                // When the tag logic requires every tag to match, we have an
+                // answer only after we're finished or when we have our first
+                // negative check
+                if (unavailableDate.tagLogic === 'all' && !tagMatch) {
+                    allMatched = false
+                    break
+                }
+            }
+
+            // Finish out the "all" tag logic
+            if (unavailableDate.tagLogic === 'all' && allMatched) {
+                isUnavailable = true
+                break
+            }
+        }
+        if (isUnavailable) {
+            workersDisallowed.push(worker.id)
+            continue
+        }
+
         // If this slot or worker has no tags, they are eligible
         if (tags.length === 0 || worker.tags.length === 0) {
             workersNeutral.push(worker.id)
