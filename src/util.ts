@@ -520,8 +520,63 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[])
         const assignmentSpacingPortion = (avgAssignmentSpacing - assignmentSpacingStandardDeviation) / avgAssignmentSpacing
         grade.components.push({
             name: 'Balance',
-            weight: 10,
+            weight: 7.5,
             value: 100.0 * (numAssignmentPortion + assignmentSpacingPortion) / 2
+        })
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Variety: Frequency of assignment to different shifts and slots. The value
+    // here is similar in calculation to the Balance component.
+    ////////////////////////////////////////////////////////////////////////////
+    {
+        // - Store baseline data on how many unique shifts and slots are
+        // available in the schedule
+        const numUniqueShifts = [...new Set(gss.map((gs) => gs.shift.name))].length
+        const numUniqueSlots = [...new Set(gss.map((gs) => gs.slot.name))].length
+
+        // - Gather raw data on which shifts and slots each worker has been
+        // assigned to
+        const assignmentsByWorker = {} as { [workerId: number]: { shiftName: string, slotName: string }[] }
+        for (const gs of gss) {
+            if (gs.slot.workerId === undefined || gs.slot.workerId === 0) {
+                continue
+            }
+
+            if (assignmentsByWorker[gs.slot.workerId] === undefined) {
+                assignmentsByWorker[gs.slot.workerId] = []
+            }
+
+            assignmentsByWorker[gs.slot.workerId]?.push({
+                shiftName: gs.shift.name,
+                slotName: gs.slot.name
+            })
+        }
+
+        // - Summarize the number of unique shifts and slots for each worker
+        const numUniqueShiftsPerWorker = [] as number[]
+        const numUniqueSlotsPerWorker = [] as number[]
+        for (const workerId in assignmentsByWorker) {
+            const pair = assignmentsByWorker[workerId]
+            const shiftSet = [...new Set(pair?.map((p) => p.shiftName))]
+            const slotSet = [...new Set(pair?.map((p) => p.slotName))]
+            numUniqueShiftsPerWorker.push(shiftSet.length)
+            numUniqueSlotsPerWorker.push(slotSet.length)
+        }
+
+        // - Calculate the standard deviations of our shift and slot numbers
+        const avgUniqueShifts = numUniqueShiftsPerWorker.reduce((t,v) => t+v,0.0) / numUniqueShiftsPerWorker.length
+        const shiftsStandardDeviation = getStandardDeviation(numUniqueShiftsPerWorker)
+        const avgUniqueSlots = numUniqueSlotsPerWorker.reduce((t,v) => t+v,0.0) / numUniqueSlotsPerWorker.length
+        const slotsStandardDeviation = getStandardDeviation(numUniqueSlotsPerWorker)
+
+        // - Finalize our grade
+        const shiftPortion = (avgUniqueShifts - shiftsStandardDeviation) / numUniqueShifts
+        const slotPortion = (avgUniqueSlots - slotsStandardDeviation) / numUniqueSlots
+        grade.components.push({
+            name: 'Variety',
+            weight: 2.5,
+            value: 100.0 * (shiftPortion + slotPortion) / 2
         })
     }
 
