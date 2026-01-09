@@ -169,7 +169,7 @@ onmessage = function (ev) {
         }
 
         // Grade and further qualify the schedule
-        schedule.grade = util.getScheduleGrade(schedule)
+        schedule.grade = util.getScheduleGrade(schedule, message.workers)
         if (schedule.grade.overall < message.overallGradeThreshold) {
             shouldKeepResult = false
         }

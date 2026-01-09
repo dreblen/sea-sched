@@ -388,21 +388,55 @@ export function getScheduleHash(schedule: Schedule) {
     return md5(JSON.stringify(assignments))
 }
 
+export function getStandardDeviation(valueList: number[]) {
+    const avgValue = valueList.reduce((t,v) => t+v,0.0) / valueList.length
+    const deviations = valueList.map((v) => Math.pow(v - avgValue,2))
+    const numAssignmentVariance = deviations.reduce((t,v) => t+v,0.0) / deviations.length
+    return Math.sqrt(numAssignmentVariance)
+}
+
 // Calculate a grade for a schedule based on its coverage and alignment with tag
 // affinity suggestions (affinity requirements are already considered during the
 // generation process).
-export function getScheduleGrade(schedule: Schedule) {
+export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[]) {
     const grade: ScheduleGrade = {
         overall: 0,
         components: []
     }
 
     // Get generation slots for the schedule so it's easier to work with for
-    // aggregate calculations
+    // aggregate calculations. We sort it by date, shift ID, and slot ID so we
+    // can test assignment balance later.
     const gss = newGenerationSlots(schedule.events)
+    gss.sort((a,b) => {
+        if (a.event.calendarDate < b.event.calendarDate) {
+            return -1
+        }
+        if (a.event.calendarDate > b.event.calendarDate) {
+            return 1
+        }
 
+        if (a.shift.id < b.shift.id) {
+            return -1
+        }
+        if (a.shift.id > b.shift.id) {
+            return 1
+        }
+
+        if (a.slot.id < b.slot.id) {
+            return -1
+        }
+        if (a.slot.id > b.slot.id) {
+            return 1
+        }
+
+        return 0
+    })
+
+    ////////////////////////////////////////////////////////////////////////////
     // Slot coverage: What percentage of the total number of slots in the
     // schedule have been filled?
+    ////////////////////////////////////////////////////////////////////////////
     const numSlots = gss.length
     const numFilled = gss.filter((gs) => gs.slot.workerId !== undefined && gs.slot.workerId !== 0).length
     grade.components.push({
@@ -411,9 +445,89 @@ export function getScheduleGrade(schedule: Schedule) {
         value: (100.0 * numFilled) / numSlots
     })
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Balance: Consistency of spacing from one slot assignment to the next for
+    // each worker. Frequent assignments will not result in a low grade if every
+    // worker is scheduled frequently, but some workers with frequent
+    // assignments and some with sparse assignments will lower the grade.
+    ////////////////////////////////////////////////////////////////////////////
+
+    // - Start by gathering raw data on assignment spacing for each worker
+    const stepBufferByWorker = {} as { [workerId: number]: number }
+    const assignmentSpacingByWorker = {} as { [workerId: number]: number[] }
+    let lastEventId = -1
+    let lastShiftId = -1
+    let step = 0
+    for (const gs of gss) {
+        // Track when we're looking at a new event/shift
+        if (gs.event.id !== lastEventId || gs.shift.id !== lastShiftId) {
+            lastEventId = gs.event.id
+            lastShiftId = gs.shift.id
+            step++
+        }
+
+        // If there is no worker assigned to this slot, move on
+        if (gs.slot.workerId === undefined || gs.slot.workerId === 0) {
+            continue
+        }
+
+        // If we have a previous tracker for this worker, calculate the
+        // difference and store it
+        if (stepBufferByWorker[gs.slot.workerId] !== undefined) {
+            const diff = step - (stepBufferByWorker[gs.slot.workerId] as number);
+
+            // if (assignmentSpacingByWorker[gs.slot.workerId] === undefined) {
+            //     assignmentSpacingByWorker[gs.slot.workerId] = []
+            // }
+
+            (assignmentSpacingByWorker[gs.slot.workerId] as number[]).push(diff)
+        } else {
+            // If this is the first time encountering a worker, record a stub
+            // entry in case this ends up being their only shift and there is
+            // nothing else to measure
+            assignmentSpacingByWorker[gs.slot.workerId] = [0]
+        }
+
+        // Store the current step value for the assigned worker
+        stepBufferByWorker[gs.slot.workerId] = step
+    }
+
+    // - Convert our spacing details into summaries by worker, including workers
+    // who didn't make it onto this schedule at all
+    const numAssignments = [] as number[]
+    const avgAssignmentSpacings = [] as number[]
+    for (const workerId of availableWorkers.map((w) => w.id)) {
+        const set = assignmentSpacingByWorker[workerId]
+        if (set === undefined) {
+            numAssignments.push(0)
+        } else {
+            numAssignments.push(set.length)
+            avgAssignmentSpacings.push(set.reduce((t,v) => t+v,0.0) / set.length)
+        }
+    }
+
+    // - Calcualte the standard deviation for the assignment counts and spacing,
+    // along with the baseline averages for comparison when determining the
+    // final grade
+    const avgNumAssignment = numAssignments.reduce((t,v) => t+v,0.0) / numAssignments.length
+    const numAssignmentStandardDeviation = getStandardDeviation(numAssignments)
+    const avgAssignmentSpacing = avgAssignmentSpacings.reduce((t,v) => t+v,0.0) / avgAssignmentSpacings.length
+    const assignmentSpacingStandardDeviation = getStandardDeviation(avgAssignmentSpacings)
+
+    // - Finalize our grade
+    const numAssignmentPortion = (avgNumAssignment - numAssignmentStandardDeviation) / avgNumAssignment
+    const assignmentSpacingPortion = (avgAssignmentSpacing - assignmentSpacingStandardDeviation) / avgAssignmentSpacing
+    grade.components.push({
+        name: 'Balance',
+        weight: 10,
+        value: 100.0 * (numAssignmentPortion + assignmentSpacingPortion) / 2
+    })
+
+    ////////////////////////////////////////////////////////////////////////////
     // Slot affinity: Relative distribution of positive, neutral, and negative
     // affinities between workers and events/shifts/slots at a basic level
     // TODO: Improve this logic
+    ////////////////////////////////////////////////////////////////////////////
     let affinityBuffer = 0
     for (const gs of gss) {
         switch (gs.slot.affinity) {
@@ -437,11 +551,13 @@ export function getScheduleGrade(schedule: Schedule) {
     }
     grade.components.push({
         name: 'General Slot Affinity',
-        weight: 25,
+        weight: 15,
         value: (100.0 * affinityBuffer) / (numSlots)
     })
 
+    ////////////////////////////////////////////////////////////////////////////
     // Determine overall grade from components
+    ////////////////////////////////////////////////////////////////////////////
     let buffer = 0
     for (const component of grade.components) {
         buffer += (component.weight / 100.0) * component.value
