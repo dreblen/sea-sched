@@ -516,8 +516,25 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         const assignmentSpacingStandardDeviation = getStandardDeviation(avgAssignmentSpacings)
 
         // - Finalize our grade
-        const numAssignmentPortion = (avgNumAssignment - numAssignmentStandardDeviation) / avgNumAssignment
-        const assignmentSpacingPortion = (avgAssignmentSpacing - assignmentSpacingStandardDeviation) / avgAssignmentSpacing
+        let numAssignmentPortion = (avgNumAssignment - numAssignmentStandardDeviation) / avgNumAssignment
+        if (isNaN(numAssignmentPortion)) {
+            // This would happen only for the one comprehensive-method iteration
+            // that assigns no workers to any slots. This is an objectively bad
+            // scenario, so we downgrade the balance rating even though it's
+            // technically not a problem in this area specifically.
+            numAssignmentPortion = 0.0
+        }
+        let assignmentSpacingPortion = (avgAssignmentSpacing - assignmentSpacingStandardDeviation) / avgAssignmentSpacing
+        if (isNaN(assignmentSpacingPortion)) {
+            // This would happen if every worker was assigned to only one slot,
+            // which is perfect balance, or in the comprehenseive-method
+            // scenario described above, where we would want to downgrade.
+            if (avgNumAssignment === 0) {
+                assignmentSpacingPortion = 0.0
+            } else {
+                assignmentSpacingPortion = 1.0
+            }
+        }
         grade.components.push({
             name: 'Balance',
             weight: 7.5,
@@ -571,8 +588,15 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         const slotsStandardDeviation = getStandardDeviation(numUniqueSlotsPerWorker)
 
         // - Finalize our grade
-        const shiftPortion = (avgUniqueShifts - shiftsStandardDeviation) / numUniqueShifts
-        const slotPortion = (avgUniqueSlots - slotsStandardDeviation) / numUniqueSlots
+        let shiftPortion = (avgUniqueShifts - shiftsStandardDeviation) / numUniqueShifts
+        let slotPortion = (avgUniqueSlots - slotsStandardDeviation) / numUniqueSlots
+        if (isNaN(shiftPortion) || isNaN(slotPortion)) {
+            // This will happen in the one comprehensive-generation scenario
+            // described above regarding balance. If this happens, we want to
+            // downgrade the result.
+            shiftPortion = 0.0
+            slotPortion = 0.0
+        }
         grade.components.push({
             name: 'Variety',
             weight: 2.5,
