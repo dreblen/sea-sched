@@ -193,6 +193,7 @@ async function generate() {
             seed: Math.ceil(permutationThresholdForMessage.value / numThreads) * i,
             events: baseSchedule.events,
             workers: setup.workers,
+            tagAffinities: setup.tagAffinities,
             affinitiesByTagTag: setup.affinitiesByTagTag,
             isStopShort: isStopShortForMessage.value,
             isComprehensive: isComprehensiveForMessage.value,

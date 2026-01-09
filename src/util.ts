@@ -18,7 +18,7 @@ export function getDateString(date?: Date) {
 // Helpers for managing events in stores
 ////////////////////////////////////////////////////////////////////////////////
 
-import type { GenericEvent, GenericShift, GenericSlot, TagType } from '@/types'
+import type { GenericEvent, GenericShift, GenericSlot, TagAffinity, TagType } from '@/types'
 
 export interface EventManagementStore {
     addEvent: { (): GenericEvent|void }
@@ -398,7 +398,7 @@ export function getStandardDeviation(valueList: number[]) {
 // Calculate a grade for a schedule based on its coverage and alignment with tag
 // affinity suggestions (affinity requirements are already considered during the
 // generation process).
-export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[]) {
+export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[], tagAffinities: TagAffinity[]) {
     const grade: ScheduleGrade = {
         overall: 0,
         components: []
@@ -583,34 +583,57 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[])
     ////////////////////////////////////////////////////////////////////////////
     // Slot affinity: Relative distribution of positive, neutral, and negative
     // affinities between workers and events/shifts/slots at a basic level
-    // TODO: Improve this logic
     ////////////////////////////////////////////////////////////////////////////
     {
-        let affinityBuffer = 0
+        // - Determine the number of negative, neutral, and positive affinities
+        // found in the schedule assignments
+        const numAffinities = [0, 0, 0]
         for (const gs of gss) {
             switch (gs.slot.affinity) {
-                case AssignmentAffinity.Required: {
-                    affinityBuffer += 3
+                case AssignmentAffinity.Unwanted:
+                    (numAffinities[0] as number)++
                     break
-                }
-                case AssignmentAffinity.Preferred: {
-                    affinityBuffer += 2
+                case AssignmentAffinity.Neutral:
+                    (numAffinities[1] as number)++
                     break
-                }
-                case AssignmentAffinity.Neutral: {
-                    affinityBuffer++
+                case AssignmentAffinity.Required:
+                case AssignmentAffinity.Preferred:
+                    (numAffinities[2] as number)++
                     break
-                }
-                case AssignmentAffinity.Unwanted: {
-                    affinityBuffer--
-                    break
-                }
             }
         }
+
+        // - Calculate our affinity bias as an average where negative affinities
+        // are 0, neutral are 1, and positive are 2
+        const totalAffinities = numAffinities.reduce((t,v) => t + v,0)
+        const avgAffinity = numAffinities.reduce((t,v,i) => t + (v * i),0) / totalAffinities
+
+        // - Check whether or not any positive affinities were possible for the
+        // schedule so we don't grade too harshly
+        let hasPositive = false
+        for (const affinity of tagAffinities) {
+            if (affinity.isPositive) {
+                hasPositive = true
+                break
+            }
+        }
+
+        // - Finalize the grade (the idea is that our scores range from 0 to 2,
+        // but 2 is only possible if there are positive affinities; if there are
+        // none, we score out of the actual highest score of 1, but if there are
+        // then we score out of 2)
+        let gradeValue = avgAffinity
+        if (hasPositive) {
+            gradeValue /= 2.0
+        }
+        if (isNaN(gradeValue)) {
+            gradeValue = 0
+        }
+
         grade.components.push({
             name: 'General Slot Affinity',
             weight: 15,
-            value: (100.0 * affinityBuffer) / (gss.length)
+            value: 100.0 * gradeValue
         })
     }
 
