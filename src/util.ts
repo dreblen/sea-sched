@@ -619,9 +619,14 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[])
     ////////////////////////////////////////////////////////////////////////////
     let buffer = 0
     for (const component of grade.components) {
+        // Normalize the grades to one decimal
+        component.value = Math.round(component.value * 10) / 10
+
+        // Add to the overall total
         buffer += (component.weight / 100.0) * component.value
     }
     grade.overall = Math.min(100, buffer)
+    grade.overall = Math.round(grade.overall * 10) / 10
 
     return grade
 }
