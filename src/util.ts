@@ -527,7 +527,7 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         let assignmentSpacingPortion = (avgAssignmentSpacing - assignmentSpacingStandardDeviation) / avgAssignmentSpacing
         if (isNaN(assignmentSpacingPortion)) {
             // This would happen if every worker was assigned to only one slot,
-            // which is perfect balance, or in the comprehenseive-method
+            // which is perfect balance, or in the comprehensive-method
             // scenario described above, where we would want to downgrade.
             if (avgNumAssignment === 0) {
                 assignmentSpacingPortion = 0.0
