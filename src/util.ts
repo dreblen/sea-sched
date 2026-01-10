@@ -450,12 +450,17 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
     // Balance: Consistency of spacing from one slot assignment to the next for
     // each worker. Frequent assignments will not result in a low grade if every
     // worker is scheduled frequently, but some workers with frequent
-    // assignments and some with sparse assignments will lower the grade.
+    // assignments and some with sparse assignments will lower the grade. This
+    // also looks at objectively spreading assignments over the course of the
+    // schedule so you don't end up with, for example, two back-to-back
+    // assignments in the first two weeks for one worker and two back-to-back
+    // assignments in the last two weeks for another worker.
     ////////////////////////////////////////////////////////////////////////////
     {
         // - Start by gathering raw data on assignment spacing for each worker
         const stepBufferByWorker = {} as { [workerId: number]: number }
         const assignmentSpacingByWorker = {} as { [workerId: number]: number[] }
+        const assignmentStepsByWorker = {} as { [workerId: number]: number[] }
         let lastEventId = -1
         let lastShiftId = -1
         let step = 0
@@ -477,10 +482,6 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
             if (stepBufferByWorker[gs.slot.workerId] !== undefined) {
                 const diff = step - (stepBufferByWorker[gs.slot.workerId] as number);
 
-                // if (assignmentSpacingByWorker[gs.slot.workerId] === undefined) {
-                //     assignmentSpacingByWorker[gs.slot.workerId] = []
-                // }
-
                 (assignmentSpacingByWorker[gs.slot.workerId] as number[]).push(diff)
             } else {
                 // If this is the first time encountering a worker, record a stub
@@ -489,9 +490,16 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
                 assignmentSpacingByWorker[gs.slot.workerId] = [0]
             }
 
-            // Store the current step value for the assigned worker
+            // Store the current step value for the assigned worker, both in our
+            // working buffer for spacing calculations and our permanent record
+            // for objective spread calculations.
             stepBufferByWorker[gs.slot.workerId] = step
+            if (assignmentStepsByWorker[gs.slot.workerId] === undefined) {
+                assignmentStepsByWorker[gs.slot.workerId] = []
+            }
+            (assignmentStepsByWorker[gs.slot.workerId] as number[]).push(step)
         }
+        const totalSteps = step
 
         // - Convert our spacing details into summaries by worker, including workers
         // who didn't make it onto this schedule at all
@@ -515,6 +523,49 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         const avgAssignmentSpacing = avgAssignmentSpacings.reduce((t,v) => t+v,0.0) / avgAssignmentSpacings.length
         const assignmentSpacingStandardDeviation = getStandardDeviation(avgAssignmentSpacings)
 
+        // - Convert our assignment step details into segment summaries by
+        // worker so we can calculate spread
+        const spreadGradesPerWorker = [] as number[]
+        for (const workerId of Object.keys(assignmentStepsByWorker)) {
+            const workerSteps = assignmentStepsByWorker[parseInt(workerId)] as number[]
+
+            // Divide our total number of steps by the number of assignments for
+            // this worker so we can build equal segments appropriate to this
+            // worker's assignments
+            const increment = totalSteps / workerSteps.length
+            const floorSegments = [] as number[]
+            const ceilSegments = [] as number[]
+            for (let i = 1; (i * increment) <= totalSteps; i++) {
+                floorSegments.push(Math.floor(i * increment))
+                ceilSegments.push(Math.ceil(i * increment))
+            }
+
+            // Determine which segments the worker's assignments fall under, and
+            // use that information to calculate a spread grade for the worker
+            const gradeBuffers = [] as number[]
+            for (const segmentSet of [floorSegments, ceilSegments]) {
+                // Gather the raw range data
+                const assignmentBuffer = [] as number[]
+                for (let step of workerSteps) {
+                    for (let i = 0; i < segmentSet.length; i++) {
+                        if (step <= (segmentSet[i] as number)) {
+                            assignmentBuffer.push(i)
+                            break
+                        }
+                    }
+                }
+
+                // Determine the number of unique segments the worker was
+                // assigned to, and use that to calculate the spread grade
+                const numAssignments = (new Set(assignmentBuffer)).size
+                gradeBuffers.push(numAssignments / segmentSet.length)
+            }
+
+            // Store the average of our floor and ceiling grades as the final
+            // spread grade for the worker
+            spreadGradesPerWorker.push(gradeBuffers.reduce((t,v) => t + v,0) / gradeBuffers.length)
+        }
+
         // - Finalize our grade
         let numAssignmentPortion = (avgNumAssignment - numAssignmentStandardDeviation) / avgNumAssignment
         if (isNaN(numAssignmentPortion)) {
@@ -535,10 +586,26 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
                 assignmentSpacingPortion = 1.0
             }
         }
+        let spreadPortion = spreadGradesPerWorker.reduce((t,v) => t + v,0) / spreadGradesPerWorker.length
+        if (isNaN(spreadPortion)) {
+            // This would happen in the specific comprehensive-method scenario
+            // mentioned above that we want to downgrade
+            spreadPortion = 0
+        }
         grade.components.push({
-            name: 'Balance',
-            weight: 7.5,
-            value: 100.0 * (numAssignmentPortion + assignmentSpacingPortion) / 2
+            name: 'Balance: Count',
+            weight: 2.5,
+            value: 100.0 * numAssignmentPortion
+        })
+        grade.components.push({
+            name: 'Balance: Spacing',
+            weight: 2.5,
+            value: 100.0 * assignmentSpacingPortion
+        })
+        grade.components.push({
+            name: 'Balance: Distribution',
+            weight: 2.5,
+            value: 100.0 * spreadPortion
         })
     }
 
