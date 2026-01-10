@@ -127,7 +127,7 @@ export function removeShiftSlot(events: GenericEvent[], eventId?: number, shiftI
 ////////////////////////////////////////////////////////////////////////////////
 
 import type { EligibleWorker, ScopeEvent, ScheduleGrade, Schedule, ScheduleEvent, ScheduleShift, ScheduleSlot, TagAffinityMapMap, Worker } from '@/types'
-import { AssignmentAffinity } from '@/types'
+import { AssignmentAffinity, AssignmentAffinityType } from '@/types'
 import md5 from 'md5'
 
 // Create a new schedule object based on but distinct from an existing event
@@ -197,6 +197,18 @@ export function newGenerationSlots(events: ScopeEvent[]|ScheduleEvent[]) {
     }
 
     return generationSlots
+}
+
+export function getAssignmentAffinityType(value?: AssignmentAffinity) {
+    switch (value) {
+        case AssignmentAffinity.Unwanted:
+            return AssignmentAffinityType.Negative
+        case AssignmentAffinity.Required:
+        case AssignmentAffinity.Preferred:
+            return AssignmentAffinityType.Positive
+        default:
+            return AssignmentAffinityType.Neutral
+    }
 }
 
 // Determine a prioritized list of workers who are able to fill a specified
@@ -680,18 +692,13 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         // found in the schedule assignments
         const numAffinities = [0, 0, 0]
         for (const gs of gss) {
-            switch (gs.slot.affinity) {
-                case AssignmentAffinity.Unwanted:
-                    (numAffinities[0] as number)++
-                    break
-                case AssignmentAffinity.Neutral:
-                    (numAffinities[1] as number)++
-                    break
-                case AssignmentAffinity.Required:
-                case AssignmentAffinity.Preferred:
-                    (numAffinities[2] as number)++
-                    break
+            // Don't count this "affinity" if it's a non-assignment
+            if (gs.slot.workerId === undefined || gs.slot.workerId === 0) {
+                continue
             }
+            
+            const type = getAssignmentAffinityType(gs.slot.affinity);
+            (numAffinities[type] as number)++
         }
 
         // - Calculate our affinity bias as an average where negative affinities

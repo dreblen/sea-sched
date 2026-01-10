@@ -2,9 +2,12 @@
 import { computed } from 'vue'
 
 import type { Schedule } from '@/types'
+import { AssignmentAffinity, AssignmentAffinityType } from '@/types'
 
 import { useSetupStore } from '@/stores/setup'
 import { useResultsStore } from '@/stores/results'
+
+import * as util from '@/util'
 
 import ListToDetail from '../ListToDetail.vue'
 
@@ -20,6 +23,24 @@ function getColorForGrade(gradeValue?: number) {
         return 'warning'
     } else {
         return 'error'
+    }
+}
+
+function getAssignmentAffinityProps(workerId?: number, value?: AssignmentAffinity) {
+    // If there is no assignment, we display strongly negative results
+    if (workerId === undefined || workerId === 0) {
+        return ['error','mdi-alert-octagon']
+    }
+
+    // Otherwise, we use the actual affinity values
+    const type = util.getAssignmentAffinityType(value)
+    switch (type) {
+        case AssignmentAffinityType.Positive:
+            return ['success','mdi-check-circle']
+        case AssignmentAffinityType.Negative:
+            return ['warning','mdi-alert']
+        default:
+            return []
     }
 }
 
@@ -102,6 +123,12 @@ function getNumAssignmentsForWorker(schedule: Schedule, workerId?: number) {
                                             <p v-for="slot in event.shifts.find((s) => s.name === name)?.slots" :key="slot.id">
                                                 {{ slot.name }}:
                                                 <v-hover v-slot="{ isHovering, props }">
+                                                    <v-icon
+                                                        v-if="slot.affinity !== AssignmentAffinity.Neutral"
+                                                        :color="getAssignmentAffinityProps(slot.workerId, slot.affinity)[0]"
+                                                    >
+                                                        {{ getAssignmentAffinityProps(slot.workerId, slot.affinity)[1] }}
+                                                    </v-icon>
                                                     <span v-bind="props">
                                                         {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
                                                         <template v-if="isHovering">

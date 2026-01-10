@@ -112,6 +112,12 @@ export interface Scope extends Common {
 // Schedule Objects
 ////////////////////////////////////////////////////////////////////////////////
 
+export enum AssignmentAffinityType {
+    Negative = 0,
+    Neutral = 1,
+    Positive = 2
+}
+
 export enum AssignmentAffinity {
     Required = 1,
     Preferred = 2,
