@@ -38,6 +38,16 @@ const uniqueShiftNames = computed(() => {
 
     return names
 })
+
+function getNumAssignmentsForWorker(schedule: Schedule, workerId?: number) {
+    return schedule.events.reduce(
+        (t, e) => t + e.shifts.reduce(
+            (t, s) => t + s.slots.reduce(
+                (t, l) => t + (l.workerId === workerId ? 1 : 0),0
+            ),0
+        ),0
+    )
+}
 </script>
 
 <template>
@@ -76,7 +86,7 @@ const uniqueShiftNames = computed(() => {
                     </v-row>
                     <v-row>
                         <v-col>
-                            <table>
+                            <v-table>
                                 <thead>
                                     <tr>
                                         <th>Event</th>
@@ -90,12 +100,26 @@ const uniqueShiftNames = computed(() => {
                                         <td>{{ event.name }}</td>
                                         <td v-for="name in uniqueShiftNames" :key="name">
                                             <p v-for="slot in event.shifts.find((s) => s.name === name)?.slots" :key="slot.id">
-                                                {{ slot.name }}: {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
+                                                {{ slot.name }}:
+                                                <v-hover v-slot="{ isHovering, props }">
+                                                    <span v-bind="props">
+                                                        {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
+                                                        <template v-if="isHovering">
+                                                            <v-chip size="small" density="compact">
+                                                                {{ getNumAssignmentsForWorker(schedule as Schedule, slot.workerId) }}
+                                                            </v-chip>
+                                                        </template>
+                                                        <template v-else>
+                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                        </template>
+                                                    </span>
+                                                </v-hover>
                                             </p>
                                         </td>
                                     </tr>
                                 </tbody>
-                            </table>
+                            </v-table>
                         </v-col>
                     </v-row>
                 </v-container>
