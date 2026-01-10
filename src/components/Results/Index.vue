@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { Schedule } from '@/types'
+import type { Schedule, ScheduleEvent, ScopeSegment } from '@/types'
 import { AssignmentAffinity, AssignmentAffinityType } from '@/types'
 
 import { useSetupStore } from '@/stores/setup'
@@ -60,14 +60,30 @@ const uniqueShiftNames = computed(() => {
     return names
 })
 
-function getNumAssignmentsForWorker(schedule: Schedule, workerId?: number) {
-    return schedule.events.reduce(
-        (t, e) => t + e.shifts.reduce(
+function getNumAssignmentsForWorker(schedule: Schedule, calendarDate: string, workerId?: number) {
+    // Define a function that can be used to reduce a list of schedule events
+    // into the number of assignments for the specified worker in that list
+    const eventReducer = (t: number, e: ScheduleEvent) =>
+        t + e.shifts.reduce(
             (t, s) => t + s.slots.reduce(
                 (t, l) => t + (l.workerId === workerId ? 1 : 0),0
             ),0
-        ),0
-    )
+        )
+    
+    // Get the number of assignments in total, by month, and by week
+    const total = schedule.events.reduce(eventReducer,0)
+
+    const targetMonth = results.months.find((m) => calendarDate >= m.dateStart && calendarDate <= m.dateEnd) as ScopeSegment
+    const inMonth = schedule.events
+        .filter((e) => e.calendarDate >= targetMonth.dateStart && e.calendarDate <= targetMonth.dateEnd)
+        .reduce(eventReducer,0)
+
+    const targetWeek = results.weeks.find((w) => calendarDate >= w.dateStart && calendarDate <= w.dateEnd) as ScopeSegment
+    const inWeek = schedule.events
+        .filter((e) => e.calendarDate >= targetWeek.dateStart && e.calendarDate <= targetWeek.dateEnd)
+        .reduce(eventReducer,0)
+
+    return `${total} / ${inMonth} / ${inWeek}`
 }
 </script>
 
@@ -133,7 +149,7 @@ function getNumAssignmentsForWorker(schedule: Schedule, workerId?: number) {
                                                         {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
                                                         <template v-if="isHovering">
                                                             <v-chip size="small" density="compact">
-                                                                {{ getNumAssignmentsForWorker(schedule as Schedule, slot.workerId) }}
+                                                                {{ getNumAssignmentsForWorker(schedule as Schedule, event.calendarDate, slot.workerId) }}
                                                             </v-chip>
                                                         </template>
                                                         <template v-else>

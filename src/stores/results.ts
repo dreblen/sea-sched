@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import { defineStore } from 'pinia'
-import { useLocalStorage } from '@vueuse/core'
+import { useLocalStorage, type RemovableRef } from '@vueuse/core'
 
 import type * as SeaSched from '@/types'
 
@@ -22,10 +22,34 @@ export const useResultsStore = defineStore('results', () => {
         schedules.value = []
     }
 
+    const weeks = useLocalStorage('results-weeks',[] as SeaSched.ScopeSegment[])
+    const months = useLocalStorage('results-months',[] as SeaSched.ScopeSegment[])
+
+    function setScopeSegment(prop: RemovableRef<SeaSched.ScopeSegment[]>, refSegments: SeaSched.ScopeSegment[]) {
+        prop.value = []
+        for (const segment of refSegments) {
+            prop.value.push({
+                id: segment.id,
+                name: segment.name,
+                tags: segment.tags.slice(),
+                dateStart: segment.dateStart,
+                dateEnd: segment.dateEnd,
+            })
+        }
+    }
+
+    function setScopeSegments(refWeeks: SeaSched.ScopeSegment[], refMonths: SeaSched.ScopeSegment[]) {
+        setScopeSegment(weeks, refWeeks)
+        setScopeSegment(months, refMonths)
+    }
+
     return {
         schedules,
         scheduleHashes,
         addSchedule,
         clearSchedules,
+        weeks,
+        months,
+        setScopeSegments,
     }
 })
