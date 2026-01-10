@@ -22,6 +22,7 @@ const props = defineProps<{
         :return-object="false"
         :label="label || 'Tags'"
         :hint="hint"
+        :hide-details="hint === undefined"
         chips
         closable-chips
         multiple

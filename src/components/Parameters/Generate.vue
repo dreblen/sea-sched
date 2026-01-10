@@ -67,11 +67,14 @@ for (const event of parameters.scope.events) {
     }
 }
 
+// We only want to consider active workers, so get that list for reference
+const activeWorkers = setup.workers.filter((w) => w.isActive)
+
 // Store some simple summary statistics for display before generation
 const numEvents = eligibleEvents.length
 const numShifts = eligibleEvents.reduce((acc, e) => acc + e.shifts.length,0)
 const numSlots = eligibleEvents.reduce((acc,e) => acc + e.shifts.reduce((acc, s) => acc + s.slots.length,0),0)
-const numWorkers = setup.workers.length
+const numWorkers = activeWorkers.length
 const numPermutations = Math.pow(numWorkers + 1, numSlots)
 
 // Basic generation controls
@@ -107,7 +110,7 @@ async function generate() {
     const baseSchedule = util.newSchedule(eligibleEvents)
     const baseGenerationSlots = util.newGenerationSlots(baseSchedule.events)
     for (const slot of baseGenerationSlots) {
-        let eligible = util.getEligibleWorkersForSlot(slot, setup.workers, setup.affinitiesByTagTag)
+        let eligible = util.getEligibleWorkersForSlot(slot, activeWorkers, setup.affinitiesByTagTag)
         if (eligible.length === 1) {
             slot.slot.workerId = eligible[0]?.workerId
             slot.slot.affinity = eligible[0]?.affinity
@@ -192,7 +195,7 @@ async function generate() {
         const message: InboundMessage = {
             seed: Math.ceil(permutationThresholdForMessage.value / numThreads) * i,
             events: baseSchedule.events,
-            workers: setup.workers,
+            workers: activeWorkers,
             tagAffinities: setup.tagAffinities,
             affinitiesByTagTag: setup.affinitiesByTagTag,
             isStopShort: isStopShortForMessage.value,

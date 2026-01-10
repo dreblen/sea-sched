@@ -116,6 +116,7 @@ export const useSetupStore = defineStore('setup', () => {
             id: maxWorkerId.value + 1,
             name: `New Worker ${maxWorkerId.value + 1}`,
             tags: [],
+            isActive: true,
             weekLimit: 0,
             weekLimitRequired: false,
             monthLimit: 0,

@@ -62,11 +62,21 @@ const tagLogicOptions = [
         </template>
         <template v-else>
             <v-row>
-                <v-col>
-                    <v-text-field label="Name" v-model="worker.item.name"></v-text-field>
+                <v-col cols="12" sm="6">
+                    <v-text-field label="Name" v-model="worker.item.name" hide-details></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="6">
+                    <tag-select v-model="(worker.item as Worker).tags" />
                 </v-col>
                 <v-col>
-                    <tag-select v-model="(worker.item as Worker).tags" />
+                    <v-switch
+                        v-model="(worker.item as Worker).isActive"
+                        :label="(worker.item as Worker).isActive ? 'Active' : 'Inactive'"
+                        color="primary"
+                        hint="Only active workers will be considered for scheduling"
+                        persistent-hint
+                    >
+                    </v-switch>
                 </v-col>
             </v-row>
             <v-row>
