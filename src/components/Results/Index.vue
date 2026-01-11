@@ -143,6 +143,19 @@ function getNumAssignmentsForWorker(schedule: Schedule, calendarDate: string, wo
 
     return `${total} / ${inMonth} / ${inWeek}`
 }
+
+function onShiftMouseEnterOrLeave(type: 'enter'|'leave', monthId: number, weekId: number) {
+    const monthRows = document.getElementsByClassName(`month-${monthId}`)
+    const weekRows = document.getElementsByClassName(`week-${weekId}`)
+    for (const row of monthRows) {
+        let targetValue = (type === 'enter') ? '#def' : '';
+        (row as HTMLElement).style.backgroundColor = targetValue
+    }
+    for (const row of weekRows) {
+        let targetValue = (type === 'enter') ? '#ffc' : '';
+        (row as HTMLElement).style.backgroundColor = targetValue
+    }
+}
 </script>
 
 <template>
@@ -194,7 +207,11 @@ function getNumAssignmentsForWorker(schedule: Schedule, calendarDate: string, wo
                                 <tbody>
                                     <template v-for="month in getScheduleByMonthAndWeek((schedule as Schedule))" :key="month.id">
                                         <template v-for="(week, i) in month.weeks" :key="week.id">
-                                            <tr v-for="(event, j) in week.events" :key="event.id">
+                                            <tr
+                                                v-for="(event, j) in week.events"
+                                                :key="event.id"
+                                                :class="`month-${month.id}`"
+                                            >
                                                 <td
                                                     v-if="i === 0 && j === 0"
                                                     :rowspan="month.weeks.reduce((t,v) => t + v.events.length,0)"
@@ -203,8 +220,20 @@ function getNumAssignmentsForWorker(schedule: Schedule, calendarDate: string, wo
                                                         {{ month.name.replace(' ','&nbsp;') }}
                                                     </span>
                                                 </td>
-                                                <td>{{ event.name }}</td>
-                                                <td v-for="name in uniqueShiftNames" :key="name">
+                                                <td
+                                                    @mouseenter="onShiftMouseEnterOrLeave('enter',month.id, week.id)"
+                                                    @mouseleave="onShiftMouseEnterOrLeave('leave',month.id, week.id)"
+                                                    :class="[`month-${month.id}`,`week-${week.id}`]"
+                                                >
+                                                    {{ event.name }}
+                                                </td>
+                                                <td
+                                                    v-for="name in uniqueShiftNames"
+                                                    :key="name"
+                                                    @mouseenter="onShiftMouseEnterOrLeave('enter',month.id, week.id)"
+                                                    @mouseleave="onShiftMouseEnterOrLeave('leave',month.id, week.id)"
+                                                    :class="[`month-${month.id}`,`week-${week.id}`]"
+                                                >
                                                     <p v-for="slot in event.shifts.find((s) => s.name === name)?.slots" :key="slot.id">
                                                         {{ slot.name }}:
                                                         <v-hover v-slot="{ isHovering, props }">
