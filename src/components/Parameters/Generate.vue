@@ -111,7 +111,7 @@ async function generate() {
     const baseSchedule = util.newSchedule(eligibleEvents)
     const baseGenerationSlots = util.newGenerationSlots(baseSchedule.events)
     for (const slot of baseGenerationSlots) {
-        let eligible = util.getEligibleWorkersForSlot(slot, activeWorkers, setup.affinitiesByTagTag)
+        let eligible = util.getEligibleWorkersForSlot(slot, baseSchedule, activeWorkers, setup.affinitiesByTagTag)
         if (eligible.length === 1) {
             slot.slot.workerId = eligible[0]?.workerId
             slot.slot.affinity = eligible[0]?.affinity

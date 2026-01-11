@@ -253,41 +253,12 @@ export const useParametersStore = defineStore('parameters', () => {
         scope.value.weeks = []
         scope.value.months = []
 
-        // Iterate our scope range and populate weeks and months within it
-        const maxDate = util.getNormalizedDate(scope.value.dateEnd)
-        const bufferDate = util.getNormalizedDate(scope.value.dateStart)
-        let weekStart = util.getDateString(bufferDate)
-        let monthStart = util.getDateString(bufferDate)
-        while (bufferDate <= maxDate) {
-            const dateString = util.getDateString(bufferDate)
-            const tomorrow = util.getNormalizedDate(dateString)
-            tomorrow.setDate(tomorrow.getDate() + 1)
-            const tomorrowString = util.getDateString(tomorrow)
-
-            // Finish a week?
-            if (bufferDate.getDay() === 6) {
-                addWeek(weekStart, dateString)
-                weekStart = tomorrowString
-            }
-
-            // Finish a month?
-            if (tomorrow.getDate() === 1) {
-                addMonth(monthStart, dateString)
-                monthStart = tomorrowString
-            }
-
-            // Prep the next iteration
-            bufferDate.setDate(bufferDate.getDate() + 1)
+        const { months, weeks } = util.getMonthsAndWeeksFromDateRange(scope.value.dateStart, scope.value.dateEnd)
+        for (const month of months) {
+            addMonth(month.dateStart, month.dateEnd)
         }
-
-        // Finish out any incomplete weeks or months
-        bufferDate.setDate(bufferDate.getDate() - 1)
-        const dateString = util.getDateString(bufferDate)
-        if (dateString >= weekStart) {
-            addWeek(weekStart, dateString)
-        }
-        if (dateString >= monthStart) {
-            addMonth(monthStart, dateString)
+        for (const week of weeks) {
+            addWeek(week.dateStart, week.dateEnd)
         }
     }
 

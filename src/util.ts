@@ -14,6 +14,65 @@ export function getDateString(date?: Date) {
     return date.toISOString().split('T')[0] as string
 }
 
+export function getMonthsAndWeeksFromDateRange(dateStart: string, dateEnd: string) {
+    const months = [] as { dateStart: string, dateEnd: string }[]
+    const weeks = [] as { dateStart: string, dateEnd: string }[]
+    
+    // Iterate our range and identify weeks and months within it
+    const maxDate = getNormalizedDate(dateEnd)
+    const bufferDate = getNormalizedDate(dateStart)
+    let weekStart = getDateString(bufferDate)
+    let monthStart = getDateString(bufferDate)
+    while (bufferDate <= maxDate) {
+        const dateString = getDateString(bufferDate)
+        const tomorrow = getNormalizedDate(dateString)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        const tomorrowString = getDateString(tomorrow)
+
+        // Finish a week?
+        if (bufferDate.getDay() === 6) {
+            weeks.push({
+                dateStart: weekStart,
+                dateEnd: dateString
+            })
+            weekStart = tomorrowString
+        }
+
+        // Finish a month?
+        if (tomorrow.getDate() === 1) {
+            months.push({
+                dateStart: monthStart,
+                dateEnd: dateString
+            })
+            monthStart = tomorrowString
+        }
+
+        // Prep the next iteration
+        bufferDate.setDate(bufferDate.getDate() + 1)
+    }
+
+    // Finish out any incomplete weeks or months
+    bufferDate.setDate(bufferDate.getDate() - 1)
+    const dateString = getDateString(bufferDate)
+    if (dateString >= weekStart) {
+        weeks.push({
+            dateStart: weekStart,
+            dateEnd: dateString
+        })
+    }
+    if (dateString >= monthStart) {
+        months.push({
+            dateStart: monthStart,
+            dateEnd: dateString
+        })
+    }
+
+    return {
+        months,
+        weeks
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Helpers for managing events in stores
 ////////////////////////////////////////////////////////////////////////////////
@@ -214,7 +273,7 @@ export function getAssignmentAffinityType(value?: AssignmentAffinity) {
 // Determine a prioritized list of workers who are able to fill a specified
 // slot, along with an indicator of what affinity the workers in that list will
 // have with the slot
-export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[], affinitiesByTagTag: TagAffinityMapMap): EligibleWorker[] {
+export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule, workers: Worker[], affinitiesByTagTag: TagAffinityMapMap): EligibleWorker[] {
     const tags = [...new Set(gs.event.tags.concat(gs.shift.tags, gs.slot.tags))]
 
     const workersDisallowed = [] as number[]
@@ -230,7 +289,9 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[],
             continue
         }
 
+        ////////////////////////////////////////////////////////////////////////
         // Check the worker's unavailability
+        ////////////////////////////////////////////////////////////////////////
         let isUnavailable = false
         for (const unavailableDate of worker.unavailableDates) {
             // If we have an answer already, don't proceed
@@ -282,6 +343,57 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[],
             continue
         }
 
+        ////////////////////////////////////////////////////////////////////////
+        // Check the worker's limits
+        ////////////////////////////////////////////////////////////////////////
+        let limitAffinity = AssignmentAffinity.Neutral
+        if (worker.weekLimit > 0 || worker.monthLimit > 0) {
+            // Gather context data about the schedule's segments relevant for
+            // the generation slot being considered
+            const scheduleDateStart = schedule.events.reduce((p, v) => (v.calendarDate < p) ? v.calendarDate : p,'9999-01-01')
+            const scheduleDateEnd = schedule.events.reduce((p, v) => (v.calendarDate > p) ? v.calendarDate : p,'0000-01-01')
+            const scheduleScope = getMonthsAndWeeksFromDateRange(scheduleDateStart, scheduleDateEnd)
+            const thisMonth = scheduleScope.months.find((m) => gs.event.calendarDate >= m.dateStart && gs.event.calendarDate <= m.dateEnd)
+            const thisWeek = scheduleScope.weeks.find((w) => gs.event.calendarDate >= w.dateStart && gs.event.calendarDate <= w.dateEnd)
+
+            // Check if we have reached our week limit
+            if (worker.weekLimit > 0 && thisWeek !== undefined) {
+                const numAssignments = schedule.events
+                    .filter((e) => e.calendarDate >= thisWeek.dateStart && e.calendarDate <= thisWeek.dateEnd)
+                    .reduce((t,e) => t + e.shifts.reduce((t,s) => t + s.slots.filter((l) => l.workerId === worker.id).length,0),0)
+                
+                if (numAssignments >= worker.weekLimit) {
+                    if (worker.weekLimitRequired) {
+                        workersDisallowed.push(worker.id)
+                        continue
+                    } else {
+                        limitAffinity = AssignmentAffinity.Unwanted
+                    }
+                }
+            }
+
+            // Check if we have reached our month limit
+            if (worker.monthLimit > 0 && thisMonth !== undefined) {
+                const numAssignments = schedule.events
+                    .filter((e) => e.calendarDate >= thisMonth.dateStart && e.calendarDate <= thisMonth.dateEnd)
+                    .reduce((t,e) => t + e.shifts.reduce((t,s) => t + s.slots.filter((l) => l.workerId === worker.id).length,0),0)
+                
+                if (numAssignments >= worker.monthLimit) {
+                    if (worker.monthLimitRequired) {
+                        workersDisallowed.push(worker.id)
+                        continue
+                    } else {
+                        limitAffinity = AssignmentAffinity.Unwanted
+                    }
+                }
+            }
+        }
+        if (limitAffinity === AssignmentAffinity.Unwanted) {
+            workersUnwanted.push(worker.id)
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+
         // If this slot or worker has no tags, they are eligible
         if (tags.length === 0 || worker.tags.length === 0) {
             workersNeutral.push(worker.id)
@@ -295,7 +407,9 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, workers: Worker[],
             continue
         }
 
+        ////////////////////////////////////////////////////////////////////////
         // Check for tag affinities between this worker and the slot
+        ////////////////////////////////////////////////////////////////////////
         for (const affinityMap of affinityMaps) {
             if (affinityMap === undefined) {
                 continue
@@ -696,7 +810,7 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
             if (gs.slot.workerId === undefined || gs.slot.workerId === 0) {
                 continue
             }
-            
+
             const type = getAssignmentAffinityType(gs.slot.affinity);
             (numAffinities[type] as number)++
         }

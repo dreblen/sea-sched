@@ -65,7 +65,7 @@ onmessage = function (ev) {
                     continue
                 }
 
-                const eligibleWorker = util.getEligibleWorkersForSlot(gs, message.workers, message.affinitiesByTagTag)
+                const eligibleWorker = util.getEligibleWorkersForSlot(gs, schedule, message.workers, message.affinitiesByTagTag)
                     .find((ew) => ew.workerId === workerId)
                 if (eligibleWorker === undefined) {
                     gs.slot.workerId = 0
@@ -115,7 +115,7 @@ onmessage = function (ev) {
 
                     let assignedWorkerId: number|undefined = undefined
                     let assignedAffinity: SeaSched.AssignmentAffinity|undefined = undefined
-                    const eligible = util.getEligibleWorkersForSlot(gs, message.workers, message.affinitiesByTagTag)
+                    const eligible = util.getEligibleWorkersForSlot(gs, schedule, message.workers, message.affinitiesByTagTag)
                     if (eligible.length > 0) {
                         // Determine the lowest assignment count and any workers
                         // currently at that count
