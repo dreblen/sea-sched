@@ -123,6 +123,7 @@ export enum AssignmentAffinity {
     Preferred = 2,
     Neutral = 3,
     Unwanted = 4,
+    Disallowed = 5,
 }
 
 export interface EligibleWorker {
