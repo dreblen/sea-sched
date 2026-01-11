@@ -123,7 +123,7 @@ async function generate() {
     }
 
     // Generate schedules via worker threads
-    const numThreads = 2
+    const numThreads = navigator.hardwareConcurrency || 1
     let completedThreads = 0
     for (let i = 0; i < numThreads; i++) {
         const w = new GenerationWorker()
