@@ -156,6 +156,7 @@ export function addShiftSlot(events: GenericEvent[], eventId: number, shiftId: n
         id: maxSlotId + 1,
         name: `New Slot ${maxSlotId + 1}`,
         tags: [],
+        groupId: 1,
         isRequired: true
     }
 
@@ -221,6 +222,7 @@ export function newSchedule(events: ScopeEvent[]|ScheduleEvent[]) {
                     id: slot.id,
                     name: slot.name,
                     tags: slot.tags.slice(),
+                    groupId: slot.groupId,
                     isRequired: slot.isRequired
                 })
             }
@@ -277,7 +279,7 @@ export function getAssignmentAffinityType(value?: AssignmentAffinity) {
 export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule, workers: Worker[], affinitiesByTagTag: TagAffinityMapMap): EligibleWorker[] {
     // Gather context data about slots that are in the same shift as the one
     // being considered for assignment
-    const siblingSlots = gs.shift.slots.filter((l) => l.id !== gs.slot.id)
+    const siblingSlots = gs.shift.slots.filter((l) => l.groupId === gs.slot.groupId && l.id !== gs.slot.id)
     const siblingWorkers = siblingSlots
         .map((slot) => workers.find((w) => w.id === slot.workerId))
         .filter((w) => w !== undefined)

@@ -83,11 +83,19 @@ function onNameChange(type: TagType) {
                                                 </template>
                                                 <template v-else>
                                                     <v-row>
-                                                        <v-col>
+                                                        <v-col cols="12" sm="6">
                                                             <v-text-field label="Name" v-model="slot.name" @update:model-value="onNameChange(TagType.Slot)"></v-text-field>
                                                         </v-col>
-                                                        <v-col>
+                                                        <v-col cols="12" sm="6">
                                                             <tag-select v-model="(slot as GenericSlot).tags" />
+                                                        </v-col>
+                                                        <v-col>
+                                                            <v-number-input
+                                                                v-model="(slot as GenericSlot).groupId"
+                                                                label="Group #"
+                                                                :min="1"
+                                                                hint="Use to differentiate assignments that are concurrent but separate (e.g., different rooms)"
+                                                            />
                                                         </v-col>
                                                         <v-col>
                                                             <v-switch

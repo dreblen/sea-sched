@@ -55,6 +55,7 @@ for (const event of parameters.scope.events) {
                 id: slot.id,
                 name: slot.name,
                 tags: slot.tags.slice(),
+                groupId: slot.groupId,
                 isRequired: slot.isRequired
             })
         }

@@ -59,6 +59,7 @@ export interface Worker extends Tagged {
 }
 
 export interface Slot extends Tagged {
+    groupId: number
     isRequired: boolean
 }
 
@@ -83,6 +84,7 @@ export interface Event extends Tagged {
 ////////////////////////////////////////////////////////////////////////////////
 
 export interface ScopeSlot extends Tagged {
+    groupId: number
     isRequired: boolean
 }
 
@@ -132,6 +134,7 @@ export interface EligibleWorker {
 }
 
 export interface ScheduleSlot extends Tagged {
+    groupId: number
     isRequired: boolean
     workerId?: number // 0 = Intentionally empty, undefined = Not evaluated
     affinity?: AssignmentAffinity
@@ -184,6 +187,7 @@ export interface Schedule extends Common {
 ////////////////////////////////////////////////////////////////////////////////
 
 export interface GenericSlot extends Tagged {
+    groupId: number
     isRequired: boolean
 }
 

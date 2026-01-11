@@ -220,6 +220,7 @@ export const useParametersStore = defineStore('parameters', () => {
                         }
 
                         newSlot.name = slot.name
+                        newSlot.groupId = slot.groupId
                         newSlot.isRequired = slot.isRequired
                         for (const tag of slot.tags) {
                             newSlot.tags.push(tag)
