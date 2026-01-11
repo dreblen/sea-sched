@@ -726,7 +726,7 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         grade.components.push({
             name: 'Balance: Spacing',
             weight: 2.5,
-            value: 100.0 * assignmentSpacingPortion
+            value: 100.0 * (Math.max(0,assignmentSpacingPortion))
         })
         grade.components.push({
             name: 'Balance: Distribution',
