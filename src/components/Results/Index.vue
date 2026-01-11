@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { Schedule, ScheduleEvent, ScopeSegment } from '@/types'
+import type { Schedule, ScheduleEvent, ScheduleMonth, ScheduleWeek, ScopeSegment } from '@/types'
 import { AssignmentAffinity, AssignmentAffinityType } from '@/types'
 
 import { useSetupStore } from '@/stores/setup'
@@ -59,6 +59,64 @@ const uniqueShiftNames = computed(() => {
 
     return names
 })
+
+function getScheduleByMonthAndWeek(schedule: Schedule) {
+    // Gather data about events grouped by week
+    const eventsByWeek = {} as { [weekId: number]: ScheduleEvent[] }
+    for (const event of schedule.events) {
+        const targetWeek = results.weeks.find((w) => event.calendarDate >= w.dateStart && event.calendarDate <= w.dateEnd) as ScopeSegment
+        if (eventsByWeek[targetWeek.id] === undefined) {
+            eventsByWeek[targetWeek.id] = []
+        }
+
+        eventsByWeek[targetWeek.id]?.push(event)
+    }
+
+    // Gather data about weeks grouped by month
+    const weeksByMonth = {} as { [monthId: number]: number[] }
+    for (const weekId of Object.keys(eventsByWeek)) {
+        const week = results.weeks.find((w) => w.id === parseInt(weekId)) as ScopeSegment
+        const targetMonth = results.months.find((m) => week.dateStart >= m.dateStart && week.dateStart <= m.dateEnd) as ScopeSegment
+        if (weeksByMonth[targetMonth.id] === undefined) {
+            weeksByMonth[targetMonth.id] = []
+        }
+
+        weeksByMonth[targetMonth.id]?.push(week.id)
+    }
+
+    // Build our final schedule segments now that we have full context
+    const months = [] as ScheduleMonth[]
+    for (const monthId of Object.keys(weeksByMonth)) {
+        const month = results.months.find((m) => m.id === parseInt(monthId)) as ScopeSegment
+        const newMonth: ScheduleMonth = {
+            id: month.id,
+            name: month.name,
+            dateStart: month.dateStart,
+            dateEnd: month.dateEnd,
+            tags: month.tags.slice(),
+            weeks: []
+        }
+
+        for (const weekId of (weeksByMonth[parseInt(monthId)] as number[])) {
+            const week = results.weeks.find((w) => w.id === weekId) as ScopeSegment
+            const events = eventsByWeek[weekId] as ScheduleEvent[]
+            const newWeek: ScheduleWeek = {
+                id: week.id,
+                name: week.name,
+                dateStart: week.dateStart,
+                dateEnd: week.dateEnd,
+                tags: week.tags.slice(),
+                events
+            }
+
+            newMonth.weeks.push(newWeek)
+        }
+
+        months.push(newMonth)
+    }
+
+    return months
+}
 
 function getNumAssignmentsForWorker(schedule: Schedule, calendarDate: string, workerId?: number) {
     // Define a function that can be used to reduce a list of schedule events
@@ -126,6 +184,7 @@ function getNumAssignmentsForWorker(schedule: Schedule, calendarDate: string, wo
                             <v-table>
                                 <thead>
                                     <tr>
+                                        <th></th>
                                         <th>Event</th>
                                         <th v-for="name in uniqueShiftNames" :key="name">
                                             {{ name }}
@@ -133,34 +192,46 @@ function getNumAssignmentsForWorker(schedule: Schedule, calendarDate: string, wo
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="event in (schedule as Schedule).events" :key="event.id">
-                                        <td>{{ event.name }}</td>
-                                        <td v-for="name in uniqueShiftNames" :key="name">
-                                            <p v-for="slot in event.shifts.find((s) => s.name === name)?.slots" :key="slot.id">
-                                                {{ slot.name }}:
-                                                <v-hover v-slot="{ isHovering, props }">
-                                                    <v-icon
-                                                        v-if="slot.affinity !== AssignmentAffinity.Neutral"
-                                                        :color="getAssignmentAffinityProps(slot.workerId, slot.affinity)[0]"
-                                                    >
-                                                        {{ getAssignmentAffinityProps(slot.workerId, slot.affinity)[1] }}
-                                                    </v-icon>
-                                                    <span v-bind="props">
-                                                        {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
-                                                        <template v-if="isHovering">
-                                                            <v-chip size="small" density="compact">
-                                                                {{ getNumAssignmentsForWorker(schedule as Schedule, event.calendarDate, slot.workerId) }}
-                                                            </v-chip>
-                                                        </template>
-                                                        <template v-else>
-                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                        </template>
+                                    <template v-for="month in getScheduleByMonthAndWeek((schedule as Schedule))" :key="month.id">
+                                        <template v-for="(week, i) in month.weeks" :key="week.id">
+                                            <tr v-for="(event, j) in week.events" :key="event.id">
+                                                <td
+                                                    v-if="i === 0 && j === 0"
+                                                    :rowspan="month.weeks.reduce((t,v) => t + v.events.length,0)"
+                                                >
+                                                    <span style="transform: rotate(-90deg); display: block">
+                                                        {{ month.name.replace(' ','&nbsp;') }}
                                                     </span>
-                                                </v-hover>
-                                            </p>
-                                        </td>
-                                    </tr>
+                                                </td>
+                                                <td>{{ event.name }}</td>
+                                                <td v-for="name in uniqueShiftNames" :key="name">
+                                                    <p v-for="slot in event.shifts.find((s) => s.name === name)?.slots" :key="slot.id">
+                                                        {{ slot.name }}:
+                                                        <v-hover v-slot="{ isHovering, props }">
+                                                            <v-icon
+                                                                v-if="slot.affinity !== AssignmentAffinity.Neutral"
+                                                                :color="getAssignmentAffinityProps(slot.workerId, slot.affinity)[0]"
+                                                            >
+                                                                {{ getAssignmentAffinityProps(slot.workerId, slot.affinity)[1] }}
+                                                            </v-icon>
+                                                            <span v-bind="props">
+                                                                {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
+                                                                <template v-if="isHovering">
+                                                                    <v-chip size="small" density="compact">
+                                                                        {{ getNumAssignmentsForWorker(schedule as Schedule, event.calendarDate, slot.workerId) }}
+                                                                    </v-chip>
+                                                                </template>
+                                                                <template v-else>
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                                </template>
+                                                            </span>
+                                                        </v-hover>
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </template>
                                 </tbody>
                             </v-table>
                         </v-col>

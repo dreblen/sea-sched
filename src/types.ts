@@ -145,6 +145,14 @@ export interface ScheduleEvent extends Tagged {
     shifts: ScheduleShift[]
 }
 
+export interface ScheduleWeek extends ScopeSegment {
+    events: ScheduleEvent[]
+}
+
+export interface ScheduleMonth extends ScopeSegment {
+    weeks: ScheduleWeek[]
+}
+
 export interface ScheduleStep {
     id: number
     sequence: number

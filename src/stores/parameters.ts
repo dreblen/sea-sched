@@ -49,7 +49,7 @@ export const useParametersStore = defineStore('parameters', () => {
     function addMonth(dateStart: string, dateEnd: string) {
         scope.value.months.push({
             id: maxMonthId.value + 1,
-            name: '',
+            name: `${util.getNormalizedDate(dateStart).toLocaleString('default', { month: 'long' })} ${dateStart.substring(0,4)}`,
             dateStart,
             dateEnd,
             tags: []
