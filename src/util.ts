@@ -275,7 +275,16 @@ export function getAssignmentAffinityType(value?: AssignmentAffinity) {
 // slot, along with an indicator of what affinity the workers in that list will
 // have with the slot
 export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule, workers: Worker[], affinitiesByTagTag: TagAffinityMapMap): EligibleWorker[] {
-    const tags = [...new Set(gs.event.tags.concat(gs.shift.tags, gs.slot.tags))]
+    // Gather context data about slots that are in the same shift as the one
+    // being considered for assignment
+    const siblingSlots = gs.shift.slots.filter((l) => l.id !== gs.slot.id)
+    const siblingWorkers = siblingSlots
+        .map((slot) => workers.find((w) => w.id === slot.workerId))
+        .filter((w) => w !== undefined)
+    const siblingWorkerTags = siblingWorkers.reduce((t, w) => t.concat(w.tags),[] as number[])
+
+    // Build a list of tags that need to be considered for affinities
+    const slotTags = [...new Set(gs.event.tags.concat(gs.shift.tags, gs.slot.tags))]
 
     const workerAffinities = [] as { workerId: number, affinity: AssignmentAffinity }[]
     for (const worker of workers) {
@@ -310,7 +319,7 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
             // For dates inside the unavailability boundaries, test tags
             let allMatched = true
             for (const id of unavailableDate.tags) {
-                const tagMatch = tags.includes(id)
+                const tagMatch = slotTags.includes(id)
 
                 // When the tag logic allows for any match, we have an answer
                 // after the first positive check
@@ -390,8 +399,9 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
 
         ////////////////////////////////////////////////////////////////////////
 
-        // If this slot or worker has no tags, they are eligible
-        if (tags.length === 0 || worker.tags.length === 0) {
+        // If there are no tags to consider for this slot/worker, the worker is
+        // eligible from this perspective
+        if ((slotTags.length === 0 && siblingWorkerTags.length === 0) || worker.tags.length === 0) {
             workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Neutral })
             continue
         }
@@ -404,14 +414,16 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
         }
 
         ////////////////////////////////////////////////////////////////////////
-        // Check for tag affinities between this worker and the slot
+        // Check for tag affinities between this worker and the slot, or between
+        // this worker and a worker assigned to a sibling slot
         ////////////////////////////////////////////////////////////////////////
+        const allTags = [...new Set([...slotTags, ...siblingWorkerTags])]
         for (const affinityMap of affinityMaps) {
             if (affinityMap === undefined) {
                 continue
             }
 
-            for (const tag of tags) {
+            for (const tag of allTags) {
                 const affinity = affinityMap[tag]
                 
                 // Required affinities take first priority
