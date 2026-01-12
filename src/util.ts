@@ -577,11 +577,25 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
     // schedule have been filled?
     ////////////////////////////////////////////////////////////////////////////
     {
-        const numFilled = gss.filter((gs) => gs.slot.workerId !== undefined && gs.slot.workerId !== 0).length
+        const requiredSlots = gss.filter((gs) => gs.slot.isRequired)
+        const optionalSlots = gss.filter((gs) => !gs.slot.isRequired)
+
+        const requiredFilled = requiredSlots.filter((gs) => gs.slot.workerId !== undefined && gs.slot.workerId !== 0).length
+        const optionalFilled = optionalSlots.filter((gs) => gs.slot.workerId !== undefined && gs.slot.workerId !== 0).length
+
+        const requiredPorition = 100.0 * requiredFilled / requiredSlots.length
+        const optionalPortion = 100.0 * optionalFilled / optionalSlots.length
+
         grade.components.push({
-            name: 'Overall Slot Coverage',
-            weight: 75,
-            value: (100.0 * numFilled) / gss.length
+            name: 'Required Slot Coverage',
+            weight: 65,
+            value: requiredPorition
+        })
+
+        grade.components.push({
+            name: 'Optional Slot Coverage',
+            weight: 10,
+            value: optionalPortion
         })
     }
 
