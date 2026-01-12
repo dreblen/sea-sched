@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import Events from './Events.vue'
 import Workers from './Workers.vue'
 import Tags from './Tags.vue'
+import Grading from './Grading.vue'
 import ImportExport from './ImportExport.vue'
 
 // Prep our list of sub-navigation options for this tab
@@ -12,6 +13,7 @@ const tabs = [
     { name: 'Events', component: Events },
     { name: 'Workers', component: Workers },
     { name: 'Tags', component: Tags },
+    { name: 'Grading', component: Grading },
     { name: 'Import/Export', component: ImportExport },
 ]
 </script>

@@ -106,6 +106,7 @@ async function generate() {
     // Clear out any previous results
     results.clearSchedules()
     results.setScopeSegments(parameters.scope.weeks, parameters.scope.months)
+    results.setGradeComponents(setup.gradeComponents)
 
     // Establish a base of required worker assignments that can be a starting
     // point for every schedule attempt

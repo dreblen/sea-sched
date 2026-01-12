@@ -43,6 +43,15 @@ export const useResultsStore = defineStore('results', () => {
         setScopeSegment(months, refMonths)
     }
 
+    // We maintain a separate copy of the grade component definitions so we can
+    // accurately present the weights that were present at the time of
+    // generation even if the user changes the configuration afterwards.
+    const gradeComponents = useLocalStorage('results-grade-components', [] as SeaSched.GradeComponent[])
+
+    function setGradeComponents(components: SeaSched.GradeComponent[]) {
+        gradeComponents.value = components.slice()
+    }
+
     return {
         schedules,
         scheduleHashes,
@@ -51,5 +60,7 @@ export const useResultsStore = defineStore('results', () => {
         weeks,
         months,
         setScopeSegments,
+        gradeComponents,
+        setGradeComponents,
     }
 })

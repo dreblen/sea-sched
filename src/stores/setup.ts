@@ -590,6 +590,7 @@ export const useSetupStore = defineStore('setup', () => {
         gradeComponents,
         serializeGradeComponents,
         deserializeGradeComponents,
+        resetGradeComponents,
         serialize,
         deserialize,
         reset,

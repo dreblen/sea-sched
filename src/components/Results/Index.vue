@@ -195,7 +195,7 @@ function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number)
                                                     {{ component.value }}
                                                 </v-chip>
                                             </v-col>
-                                            <v-col v-for="componentDefinition of setup.gradeComponents.filter((gc) => gc.id === component.componentId)">
+                                            <v-col v-for="componentDefinition of results.gradeComponents.filter((gc) => gc.id === component.componentId)">
                                                 {{ componentDefinition.name }} (Weight = {{ componentDefinition.weight }}%)
                                             </v-col>
                                         </v-row>
