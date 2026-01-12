@@ -6,7 +6,7 @@ import { useParametersStore } from './parameters'
 import * as util from '@/util'
 
 import type * as SeaSched from '@/types'
-import { TagType } from '@/types'
+import { GradeComponentType, TagType } from '@/types'
 
 export const useSetupStore = defineStore('setup', () => {
     const parameters = useParametersStore()
@@ -452,6 +452,66 @@ export const useSetupStore = defineStore('setup', () => {
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    // Grade Components (for weighting)
+    ////////////////////////////////////////////////////////////////////////////
+
+    const gradeComponents = useLocalStorage('setup-grade-components', [] as SeaSched.GradeComponent[])
+    if (gradeComponents.value.length === 0) {
+        resetGradeComponents()
+    }
+
+    function resetGradeComponents() {
+        gradeComponents.value = []
+
+        gradeComponents.value.push({
+            id: GradeComponentType.SlotCoverageRequired,
+            name: 'Required Slot Coverage',
+            weight: 65,
+        })
+        gradeComponents.value.push({
+            id: GradeComponentType.SlotCoverageOptional,
+            name: 'Optional Slot Coverage',
+            weight: 10,
+        })
+    
+        gradeComponents.value.push({
+            id: GradeComponentType.BalanceCount,
+            name: 'Balance: Count',
+            weight: 2.5,
+        })
+        gradeComponents.value.push({
+            id: GradeComponentType.BalanceSpacing,
+            name: 'Balance: Spacing',
+            weight: 2.5,
+        })
+        gradeComponents.value.push({
+            id: GradeComponentType.BalanceDistribution,
+            name: 'Balance: Distribution',
+            weight: 2.5,
+        })
+    
+        gradeComponents.value.push({
+            id: GradeComponentType.Variety,
+            name: 'Variety',
+            weight: 2.5,
+        })
+    
+        gradeComponents.value.push({
+            id: GradeComponentType.TagAffinity,
+            name: 'General Slot Affinity',
+            weight: 15,
+        })
+    }
+
+    function serializeGradeComponents() {
+        return JSON.stringify(gradeComponents.value)
+    }
+
+    function deserializeGradeComponents(json: string) {
+        gradeComponents.value = JSON.parse(json)
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
     // General
     ////////////////////////////////////////////////////////////////////////////
 
@@ -461,6 +521,7 @@ export const useSetupStore = defineStore('setup', () => {
             workers: serializeWorkers(),
             tags: serializeTags(),
             tagAffinities: serializeTagAffinities(),
+            gradeComponents: serializeGradeComponents()
         }
 
         return JSON.stringify(parts)
@@ -471,13 +532,15 @@ export const useSetupStore = defineStore('setup', () => {
             events: string
             workers: string
             tags: string
-            tagAffinities: string
+            tagAffinities: string,
+            gradeComponents: string
         }
 
         deserializeEvents(parts.events)
         deserializeWorkers(parts.workers)
         deserializeTags(parts.tags)
         deserializeTagAffinities(parts.tagAffinities)
+        deserializeGradeComponents(parts.gradeComponents)
     }
 
     function reset() {
@@ -488,6 +551,7 @@ export const useSetupStore = defineStore('setup', () => {
             workers: empty,
             tags: empty,
             tagAffinities: empty,
+            gradeComponents: empty,
         }))
     }
 
@@ -523,6 +587,9 @@ export const useSetupStore = defineStore('setup', () => {
         deserializeTagAffinities,
         addTagAffinity,
         removeTagAffinity,
+        gradeComponents,
+        serializeGradeComponents,
+        deserializeGradeComponents,
         serialize,
         deserialize,
         reset,

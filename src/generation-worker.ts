@@ -7,6 +7,7 @@ export interface InboundMessage {
     workers: SeaSched.Worker[]
     tagAffinities: SeaSched.TagAffinity[]
     affinitiesByTagTag: SeaSched.TagAffinityMapMap
+    gradeComponents: SeaSched.GradeComponent[]
     isStopShort: boolean
     isComprehensive: boolean
     permutationThreshold: number
@@ -170,7 +171,7 @@ onmessage = function (ev) {
         }
 
         // Grade and further qualify the schedule
-        schedule.grade = util.getScheduleGrade(schedule, message.workers, message.tagAffinities)
+        schedule.grade = util.getScheduleGrade(schedule, message.workers, message.tagAffinities, message.gradeComponents)
         if (schedule.grade.overall < message.overallGradeThreshold) {
             shouldKeepResult = false
         }

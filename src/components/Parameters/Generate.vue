@@ -200,6 +200,7 @@ async function generate() {
             workers: activeWorkers,
             tagAffinities: setup.tagAffinities,
             affinitiesByTagTag: setup.affinitiesByTagTag,
+            gradeComponents: setup.gradeComponents,
             isStopShort: isStopShortForMessage.value,
             isComprehensive: isComprehensiveForMessage.value,
             permutationThreshold: Math.ceil(permutationThresholdForMessage.value / numThreads),

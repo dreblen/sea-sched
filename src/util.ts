@@ -186,8 +186,8 @@ export function removeShiftSlot(events: GenericEvent[], eventId?: number, shiftI
 // Helpers for schedule generation
 ////////////////////////////////////////////////////////////////////////////////
 
-import type { EligibleWorker, ScopeEvent, ScheduleGrade, Schedule, ScheduleEvent, ScheduleShift, ScheduleSlot, TagAffinityMapMap, Worker } from '@/types'
-import { AssignmentAffinity, AssignmentAffinityType } from '@/types'
+import type { EligibleWorker, GradeComponent, ScopeEvent, ScheduleGrade, Schedule, ScheduleEvent, ScheduleShift, ScheduleSlot, TagAffinityMapMap, Worker } from '@/types'
+import { AssignmentAffinity, AssignmentAffinityType, GradeComponentType } from '@/types'
 import md5 from 'md5'
 
 // Create a new schedule object based on but distinct from an existing event
@@ -537,7 +537,7 @@ export function getStandardDeviation(valueList: number[]) {
 // Calculate a grade for a schedule based on its coverage and alignment with tag
 // affinity suggestions (affinity requirements are already considered during the
 // generation process).
-export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[], tagAffinities: TagAffinity[]) {
+export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[], tagAffinities: TagAffinity[], gradeComponents: GradeComponent[]) {
     const grade: ScheduleGrade = {
         overall: 0,
         components: []
@@ -587,14 +587,12 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         const optionalPortion = 100.0 * optionalFilled / optionalSlots.length
 
         grade.components.push({
-            name: 'Required Slot Coverage',
-            weight: 65,
+            componentId: GradeComponentType.SlotCoverageRequired,
             value: requiredPorition
         })
 
         grade.components.push({
-            name: 'Optional Slot Coverage',
-            weight: 10,
+            componentId: GradeComponentType.SlotCoverageOptional,
             value: optionalPortion
         })
     }
@@ -746,18 +744,15 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
             spreadPortion = 0
         }
         grade.components.push({
-            name: 'Balance: Count',
-            weight: 2.5,
+            componentId: GradeComponentType.BalanceCount,
             value: 100.0 * Math.max(0,numAssignmentPortion)
         })
         grade.components.push({
-            name: 'Balance: Spacing',
-            weight: 2.5,
+            componentId: GradeComponentType.BalanceSpacing,
             value: 100.0 * Math.max(0,assignmentSpacingPortion)
         })
         grade.components.push({
-            name: 'Balance: Distribution',
-            weight: 2.5,
+            componentId: GradeComponentType.BalanceDistribution,
             value: 100.0 * spreadPortion
         })
     }
@@ -818,8 +813,7 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
             slotPortion = 0.0
         }
         grade.components.push({
-            name: 'Variety',
-            weight: 2.5,
+            componentId: GradeComponentType.Variety,
             value: 100.0 * (shiftPortion + slotPortion) / 2
         })
     }
@@ -870,8 +864,7 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         }
 
         grade.components.push({
-            name: 'General Slot Affinity',
-            weight: 15,
+            componentId: GradeComponentType.TagAffinity,
             value: 100.0 * gradeValue
         })
     }
@@ -881,11 +874,18 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
     ////////////////////////////////////////////////////////////////////////////
     let buffer = 0
     for (const component of grade.components) {
+        // Look up the definition of this component, and skip it if we can't for
+        // some reason
+        const componentDefinition = gradeComponents.find((gc) => gc.id === component.componentId)
+        if (componentDefinition === undefined) {
+            continue
+        }
+
         // Normalize the grades to one decimal
         component.value = Math.round(component.value * 10) / 10
 
         // Add to the overall total
-        buffer += (component.weight / 100.0) * component.value
+        buffer += (componentDefinition.weight / 100.0) * component.value
     }
     grade.overall = Math.min(100, buffer)
     grade.overall = Math.round(grade.overall * 10) / 10

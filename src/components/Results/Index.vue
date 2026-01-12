@@ -189,14 +189,14 @@ function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number)
                                         Grade Details...
                                     </v-expansion-panel-title>
                                     <v-expansion-panel-text>
-                                        <v-row v-for="component of (schedule as Schedule).grade?.components" :key="component.name">
+                                        <v-row v-for="component of (schedule as Schedule).grade?.components" :key="component.componentId">
                                             <v-col cols="4" sm="2" lg="1">
                                                 <v-chip density="compact" :color="getColorForGrade(component.value)">
                                                     {{ component.value }}
                                                 </v-chip>
                                             </v-col>
-                                            <v-col>
-                                                {{ component.name }} (Weight = {{ component.weight }}%)
+                                            <v-col v-for="componentDefinition of setup.gradeComponents.filter((gc) => gc.id === component.componentId)">
+                                                {{ componentDefinition.name }} (Weight = {{ componentDefinition.weight }}%)
                                             </v-col>
                                         </v-row>
                                     </v-expansion-panel-text>

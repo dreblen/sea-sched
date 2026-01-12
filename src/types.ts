@@ -165,9 +165,23 @@ export interface ScheduleStep {
     workerId?: number
 }
 
-export interface ScheduleGradeComponent {
-    name: string
+export enum GradeComponentType {
+    SlotCoverageRequired = 101,
+    SlotCoverageOptional = 102,
+    BalanceCount = 201,
+    BalanceSpacing = 202,
+    BalanceDistribution = 203,
+    Variety = 301,
+    TagAffinity = 401,
+}
+
+export interface GradeComponent extends Common {
+    id: GradeComponentType
     weight: number
+}
+
+export interface ScheduleGradeComponent {
+    componentId: GradeComponentType
     value: number
 }
 
