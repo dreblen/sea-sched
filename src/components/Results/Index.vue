@@ -156,6 +156,18 @@ function onShiftMouseEnterOrLeave(type: 'enter'|'leave', monthId: number, weekId
         (row as HTMLElement).style.backgroundColor = targetValue
     }
 }
+
+function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number) {
+    if (workerId === undefined) {
+        return
+    }
+
+    const workerSlots = document.getElementsByClassName(`worker-${workerId}`)
+    for (const slot of workerSlots) {
+        let targetValue = (type === 'enter') ? '#ff0' : '';
+        (slot as HTMLElement).style.backgroundColor = targetValue
+    }
+}
 </script>
 
 <template>
@@ -244,7 +256,13 @@ function onShiftMouseEnterOrLeave(type: 'enter'|'leave', monthId: number, weekId
                                                                 {{ getAssignmentAffinityProps(slot.workerId, slot.affinity)[1] }}
                                                             </v-icon>
                                                             <span v-bind="props">
-                                                                {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
+                                                                <span
+                                                                    :class="`worker-${slot.workerId}`"
+                                                                    @mouseenter="onWorkerNameMouseEnterOrLeave('enter',slot.workerId)"
+                                                                    @mouseleave="onWorkerNameMouseEnterOrLeave('leave',slot.workerId)"
+                                                                >
+                                                                    {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
+                                                                </span>
                                                                 <template v-if="isHovering">
                                                                     <v-chip size="small" density="compact">
                                                                         {{ getNumAssignmentsForWorker(schedule as Schedule, event.calendarDate, slot.workerId) }}
