@@ -131,6 +131,7 @@ export enum AssignmentAffinity {
 export interface EligibleWorker {
     workerId: number
     affinity: AssignmentAffinity
+    affinityNotes?: string[]
 }
 
 export interface ScheduleSlot extends Tagged {
@@ -138,6 +139,7 @@ export interface ScheduleSlot extends Tagged {
     isRequired: boolean
     workerId?: number // 0 = Intentionally empty, undefined = Not evaluated
     affinity?: AssignmentAffinity
+    affinityNotes?: string[]
 }
 
 export interface ScheduleShift extends Tagged {

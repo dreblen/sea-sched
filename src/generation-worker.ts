@@ -75,6 +75,7 @@ onmessage = function (ev) {
 
                 gs.slot.workerId = workerId
                 gs.slot.affinity = eligibleWorker.affinity
+                gs.slot.affinityNotes = eligibleWorker.affinityNotes
             }
         }
         // Best-effort generation method
@@ -116,6 +117,7 @@ onmessage = function (ev) {
 
                     let assignedWorkerId: number|undefined = undefined
                     let assignedAffinity: SeaSched.AssignmentAffinity|undefined = undefined
+                    let assignedAffinityNotes: string[]|undefined = undefined
                     const eligible = util.getEligibleWorkersForSlot(gs, schedule, message.workers, message.affinitiesByTagTag)
                     if (eligible.length > 0) {
                         // Determine the lowest assignment count and any workers
@@ -144,7 +146,9 @@ onmessage = function (ev) {
                         }
 
                         // Store the calculated affinity no matter what
-                        assignedAffinity = eligible.find((e) => e.workerId === assignedWorkerId)?.affinity
+                        const workerMatch = eligible.find((e) => e.workerId === assignedWorkerId)
+                        assignedAffinity = workerMatch?.affinity
+                        assignedAffinityNotes = workerMatch?.affinityNotes
                     } else {
                         assignedWorkerId = 0
                     }
@@ -152,6 +156,7 @@ onmessage = function (ev) {
                     // Finalize the assignment
                     gs.slot.workerId = assignedWorkerId
                     gs.slot.affinity = assignedAffinity
+                    gs.slot.affinityNotes = assignedAffinityNotes
                     const sc = slotCountsByWorker.find((sc) => sc.workerId === assignedWorkerId)
                     if (sc) {
                         sc.count++

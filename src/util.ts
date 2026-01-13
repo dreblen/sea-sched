@@ -288,7 +288,7 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
     // Build a list of tags that need to be considered for affinities
     const slotTags = [...new Set(gs.event.tags.concat(gs.shift.tags, gs.slot.tags))]
 
-    const workerAffinities = [] as { workerId: number, affinity: AssignmentAffinity }[]
+    const workerAffinities = [] as { workerId: number, affinity: AssignmentAffinity, notes?: string[] }[]
     for (const worker of workers) {
         // If this worker is already assigned to a slot in the same shift, they
         // are not eligible for this slot
@@ -354,6 +354,7 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
         // Check the worker's limits
         ////////////////////////////////////////////////////////////////////////
         let limitAffinity = AssignmentAffinity.Neutral
+        let limitNotes = [] as string[]
         if (worker.weekLimit > 0 || worker.monthLimit > 0) {
             // Gather context data about the schedule's segments relevant for
             // the generation slot being considered
@@ -375,6 +376,7 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
                         continue
                     } else {
                         limitAffinity = AssignmentAffinity.Unwanted
+                        limitNotes.push(`Week Limit (${worker.weekLimit})`)
                     }
                 }
             }
@@ -391,12 +393,13 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
                         continue
                     } else {
                         limitAffinity = AssignmentAffinity.Unwanted
+                        limitNotes.push(`Month Limit (${worker.monthLimit})`)
                     }
                 }
             }
         }
         if (limitAffinity !== AssignmentAffinity.Neutral) {
-            workerAffinities.push({ workerId: worker.id, affinity: limitAffinity })
+            workerAffinities.push({ workerId: worker.id, affinity: limitAffinity, notes: limitNotes })
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -427,13 +430,14 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
 
             for (const tag of allTags) {
                 const affinity = affinityMap[tag]
+                const notes = [`${affinity?.tagId1}|${affinity?.tagId2}`]
                 
                 // Required affinities take first priority
                 if (affinity?.isRequired) {
                     // If there is a positive, required affinity, add the worker
                     // to the required workers list
                     if (affinity.isPositive) {
-                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Required })
+                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Required, notes })
                         continue
                     }
                     // If there is a negative, required affinity, exclude the
@@ -447,12 +451,12 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
                 else {
                     // Positive means we should try to make this assignment
                     if (affinity?.isPositive) {
-                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Preferred })
+                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Preferred, notes })
                         continue
                     }
                     // Negative means we should try to avoid this assignment
                     else if (affinity?.isPositive === false) {
-                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Unwanted })
+                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Unwanted, notes })
                         continue
                     }
                 }
@@ -502,9 +506,21 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
                 }
 
             }, AssignmentAffinity.Neutral)
+
+        // Combine all unique notes specified at our target affinity
+        const allNotes = workerAffinities
+            .filter((wa) => wa.workerId === workerId)
+            .filter((wa) => wa.affinity === affinity)
+            .filter((wa) => wa.notes !== undefined && wa.notes.length > 0)
+            .map((wa) => wa.notes as string[])
+            .flat()
+        const uniqueNotes = [...new Set(allNotes)]
+
+        // Finalize our results for this slot/worker
         results.push({
             workerId,
-            affinity
+            affinity,
+            affinityNotes: (uniqueNotes.length > 0) ? uniqueNotes : undefined
         })
     }
 

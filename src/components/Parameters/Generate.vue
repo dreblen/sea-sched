@@ -117,6 +117,7 @@ async function generate() {
         if (eligible.length === 1) {
             slot.slot.workerId = eligible[0]?.workerId
             slot.slot.affinity = eligible[0]?.affinity
+            slot.slot.affinityNotes = eligible[0]?.affinityNotes
         }
         if (eligible.length === 0) {
             slot.slot.workerId = 0
@@ -154,6 +155,39 @@ async function generate() {
                 }
                 return 0
             })
+
+            // Convert tag IDs to names in our affinity notes
+            for (const schedule of results.schedules) {
+                for (const event of schedule.events) {
+                    for (const shift of event.shifts) {
+                        for (const slot of shift.slots) {
+                            if (slot.affinityNotes === undefined) {
+                                continue
+                            }
+
+                            for (const i in slot.affinityNotes) {
+                                const currentNote = slot.affinityNotes[i] as string
+
+                                // Test if this is a tag affinity note
+                                const parts = currentNote.split('|')
+                                if (parts.length !== 2) {
+                                    continue
+                                }
+                                const id1 = parseInt(parts[0] as string)
+                                const id2 = parseInt(parts[1] as string)
+                                if (isNaN(id1) || isNaN(id2)) {
+                                    continue
+                                }
+
+                                // Look up the tag names and build a new note
+                                const tag1 = setup.tags.find((t) => t.id === id1)
+                                const tag2 = setup.tags.find((t) => t.id === id2)
+                                slot.affinityNotes[i] = `"${tag1?.name}" / "${tag2?.name}"`
+                            }
+                        }
+                    }
+                }
+            }
 
             isGenerating.value = false
         }

@@ -249,12 +249,20 @@ function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number)
                                                     <p v-for="slot in event.shifts.find((s) => s.name === name)?.slots" :key="slot.id">
                                                         {{ slot.name }}:
                                                         <v-hover v-slot="{ isHovering, props }">
-                                                            <v-icon
+                                                            <v-tooltip
                                                                 v-if="slot.affinity !== AssignmentAffinity.Neutral"
-                                                                :color="getAssignmentAffinityProps(slot.workerId, slot.affinity)[0]"
+                                                                :text="slot.affinityNotes ? slot.affinityNotes.join(', ') : 'No notes'"
+                                                                location="top"
                                                             >
-                                                                {{ getAssignmentAffinityProps(slot.workerId, slot.affinity)[1] }}
-                                                            </v-icon>
+                                                                <template #activator="{ props: tooltipProps }">
+                                                                    <v-icon
+                                                                        v-bind="tooltipProps"
+                                                                        :color="getAssignmentAffinityProps(slot.workerId, slot.affinity)[0]"
+                                                                    >
+                                                                        {{ getAssignmentAffinityProps(slot.workerId, slot.affinity)[1] }}
+                                                                    </v-icon>
+                                                                </template>
+                                                            </v-tooltip>
                                                             <span v-bind="props">
                                                                 <span
                                                                     :class="`worker-${slot.workerId}`"
