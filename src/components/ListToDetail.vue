@@ -68,6 +68,9 @@ defineEmits({
                             <slot name="append" :item="item"></slot>
                         </template>
                     </v-list>
+                    <v-card-actions v-if="$slots.appendActions">
+                        <slot name="appendActions"></slot>
+                    </v-card-actions>
                 </v-card>
             </v-col>
             <v-col v-if="$slots.default" :class="verticalPaddingClass">

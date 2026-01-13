@@ -5,6 +5,7 @@ import { useLocalStorage, type RemovableRef } from '@vueuse/core'
 import type * as SeaSched from '@/types'
 
 import * as util from '@/util'
+import { useSetupStore } from './setup'
 
 export const useResultsStore = defineStore('results', () => {
     const schedules = useLocalStorage('results-schedules',[] as SeaSched.Schedule[])
@@ -20,6 +21,16 @@ export const useResultsStore = defineStore('results', () => {
 
     function clearSchedules() {
         schedules.value = []
+    }
+
+    function regradeSchedules() {
+        const setup = useSetupStore()
+        const availableWorkers = setup.workers.filter((w) => w.isActive)
+        setGradeComponents(setup.gradeComponents)
+
+        for (const schedule of schedules.value) {
+            schedule.grade = util.getScheduleGrade(schedule, availableWorkers, setup.tagAffinities, setup.gradeComponents)
+        }
     }
 
     const weeks = useLocalStorage('results-weeks',[] as SeaSched.ScopeSegment[])
@@ -57,6 +68,7 @@ export const useResultsStore = defineStore('results', () => {
         scheduleHashes,
         addSchedule,
         clearSchedules,
+        regradeSchedules,
         weeks,
         months,
         setScopeSegments,

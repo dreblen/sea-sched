@@ -291,5 +291,33 @@ function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number)
                 {{ (item as Schedule).grade?.overall }}
             </v-chip>
         </template>
+        <template #appendActions>
+            <v-dialog max-width="500px">
+                <template #activator="{ props }">
+                    <v-btn
+                        v-bind="props"
+                        block
+                        color="warning"
+                    >
+                        Regrade
+                    </v-btn>
+                </template>
+                <template #default="{ isActive }">
+                    <v-card>
+                        <v-card-text>
+                            If configuration values have been changed since the
+                            time the schedules were generated (e.g., workers,
+                            tag relationships), the new grades will reflect the
+                            current values for those as well as the current
+                            grade weights. Do you want to regrade the schedules?
+                        </v-card-text>
+                        <v-card-actions>
+                            <v-btn @click="isActive.value = false">No</v-btn>
+                            <v-btn color="warning" @click="results.regradeSchedules(); isActive.value = false">Yes</v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </template>
+            </v-dialog>
+        </template>
     </list-to-detail>
 </template>
