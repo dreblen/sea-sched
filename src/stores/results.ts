@@ -63,6 +63,14 @@ export const useResultsStore = defineStore('results', () => {
         gradeComponents.value = components.slice()
     }
 
+    // And the same for tags, which are used to convert affinity notes to text
+    // on demand to reduce UI freezing
+    const tags = useLocalStorage('results-tags', [] as SeaSched.Tag[])
+
+    function setTags(refTags: SeaSched.Tag[]) {
+        tags.value = refTags.slice()
+    }
+
     return {
         schedules,
         scheduleHashes,
@@ -74,5 +82,7 @@ export const useResultsStore = defineStore('results', () => {
         setScopeSegments,
         gradeComponents,
         setGradeComponents,
+        tags,
+        setTags,
     }
 })

@@ -196,6 +196,7 @@ export interface Schedule extends Common {
     events: ScheduleEvent[]
     steps: ScheduleStep[]
     grade?: ScheduleGrade
+    notesConverted?: boolean
 }
 
 ////////////////////////////////////////////////////////////////////////////////

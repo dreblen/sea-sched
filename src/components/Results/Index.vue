@@ -60,6 +60,52 @@ const uniqueShiftNames = computed(() => {
     return names
 })
 
+function onCurrentScheduleChange(id?: number) {
+    const schedule = results.schedules.find((s) => s.id === id)
+    if (schedule === undefined) {
+        return
+    }
+
+    // Make sure this schedule has had its tag-related affinity notes converted
+    // from IDs into names. We don't do this in bulk to improve performance when
+    // results are returned from the generation worker.
+    if (schedule.notesConverted === true) {
+        return
+    }
+
+    for (const event of schedule.events) {
+        for (const shift of event.shifts) {
+            for (const slot of shift.slots) {
+                if (slot.affinityNotes === undefined) {
+                    continue
+                }
+
+                for (const i in slot.affinityNotes) {
+                    const currentNote = slot.affinityNotes[i] as string
+
+                    // Test if this is a tag affinity note
+                    const parts = currentNote.split('|')
+                    if (parts.length !== 2) {
+                        continue
+                    }
+                    const id1 = parseInt(parts[0] as string)
+                    const id2 = parseInt(parts[1] as string)
+                    if (isNaN(id1) || isNaN(id2)) {
+                        continue
+                    }
+
+                    // Look up the tag names and build a new note
+                    const tag1 = results.tags.find((t) => t.id === id1)
+                    const tag2 = results.tags.find((t) => t.id === id2)
+                    slot.affinityNotes[i] = `"${tag1?.name}" / "${tag2?.name}"`
+                }
+            }
+        }
+    }
+
+    schedule.notesConverted = true
+}
+
 function getScheduleByMonthAndWeek(schedule: Schedule) {
     // Gather data about events grouped by week
     const eventsByWeek = {} as { [weekId: number]: ScheduleEvent[] }
@@ -171,7 +217,7 @@ function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number)
 </script>
 
 <template>
-    <list-to-detail :items="results.schedules" :no-actions="true">
+    <list-to-detail :items="results.schedules" :no-actions="true" @change="onCurrentScheduleChange">
         <template #default="{ item: schedule }">
             <template v-if="!schedule">
                 No schedule currently selected.
