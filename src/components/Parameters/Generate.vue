@@ -78,17 +78,11 @@ const numSlots = eligibleEvents.reduce((acc,e) => acc + e.shifts.reduce((acc, s)
 const numWorkers = activeWorkers.length
 const numPermutations = Math.pow(numWorkers + 1, numSlots)
 
-// Basic generation controls
-const isStopShort = ref(true)
-const isComprehensive = ref(false)
-const permutationThreshold = ref(1000000)
-const overallGradeThreshold = ref(90)
-const resultThreshold = ref(25)
-
-const isComprehensiveAllowed = computed(() => permutationThreshold.value >= numPermutations)
-const isComprehensiveForMessage = computed(() => isComprehensiveAllowed.value && isComprehensive.value)
-const isStopShortForMessage = computed(() => isStopShort.value && !isComprehensive.value)
-const permutationThresholdForMessage = computed(() => Math.min(permutationThreshold.value, numPermutations))
+// Basic generation controls, building off of what's found in the parameters
+const isComprehensiveAllowed = computed(() => parameters.permutationThreshold >= numPermutations)
+const isComprehensiveForMessage = computed(() => isComprehensiveAllowed.value && parameters.isComprehensive)
+const isStopShortForMessage = computed(() => parameters.isStopShort && !parameters.isComprehensive)
+const permutationThresholdForMessage = computed(() => Math.min(parameters.permutationThreshold, numPermutations))
 
 const isGenerating = ref(false)
 const generationProgress = ref(0)
@@ -208,8 +202,8 @@ async function generate() {
             isStopShort: isStopShortForMessage.value,
             isComprehensive: isComprehensiveForMessage.value,
             permutationThreshold: Math.ceil(permutationThresholdForMessage.value / numThreads),
-            overallGradeThreshold: overallGradeThreshold.value,
-            resultThreshold: resultThreshold.value
+            overallGradeThreshold: parameters.overallGradeThreshold,
+            resultThreshold: parameters.resultThreshold
         }
         w.postMessage(JSON.stringify(message))
     }
@@ -262,34 +256,34 @@ watchEffect(() => {
     <v-row>
         <v-col>
             <v-number-input
-                v-model="permutationThreshold"
+                v-model="parameters.permutationThreshold"
                 label="Maximum Generation Attempts"
                 :min="1"
             />
         </v-col>
         <v-col>
             <v-switch
-                v-model="isStopShort"
+                v-model="parameters.isStopShort"
                 :disabled="isComprehensiveForMessage"
                 color="primary"
                 hint="If yes, stop generating schedules after reaching the target amount at the target grade, even if not the highest possible grade"
                 persistent-hint
             >
                 <template #label>
-                    Stop Short: {{ isStopShort ? 'Yes' : 'No' }}
+                    Stop Short: {{ parameters.isStopShort ? 'Yes' : 'No' }}
                 </template>
             </v-switch>
         </v-col>
         <v-col>
             <v-switch
-                v-model="isComprehensive"
+                v-model="parameters.isComprehensive"
                 :disabled="!isComprehensiveAllowed"
                 color="primary"
                 hint="Comprehensive generation method only possible when max generation attempts >= total possible permutations"
                 persistent-hint
             >
                 <template #label>
-                    <template v-if="isComprehensive">
+                    <template v-if="parameters.isComprehensive">
                         Comprehensive
                     </template>
                     <template v-else>
@@ -300,7 +294,7 @@ watchEffect(() => {
         </v-col>
         <v-col>
             <v-number-input
-                v-model="overallGradeThreshold"
+                v-model="parameters.overallGradeThreshold"
                 label="Minimum Schedule Grade"
                 :min="0"
                 :max="100"
@@ -308,7 +302,7 @@ watchEffect(() => {
         </v-col>
         <v-col>
             <v-number-input
-                v-model="resultThreshold"
+                v-model="parameters.resultThreshold"
                 label="Maximum Schedules"
                 :min="1"
             />

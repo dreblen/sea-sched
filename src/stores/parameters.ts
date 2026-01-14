@@ -286,6 +286,16 @@ export const useParametersStore = defineStore('parameters', () => {
         }
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Schedule Generation Controls
+    ////////////////////////////////////////////////////////////////////////////
+
+    const isStopShort = ref(true)
+    const isComprehensive = ref(false)
+    const permutationThreshold = ref(1000000)
+    const overallGradeThreshold = ref(90)
+    const resultThreshold = ref(25)
+
     return {
         currentStep,
         scope,
@@ -299,5 +309,10 @@ export const useParametersStore = defineStore('parameters', () => {
         templateEventIds,
         generateScope,
         removeTagReferences,
+        isStopShort,
+        isComprehensive,
+        permutationThreshold,
+        overallGradeThreshold,
+        resultThreshold,
     }
 })
