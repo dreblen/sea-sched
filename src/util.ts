@@ -604,7 +604,6 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         return 0
     })
 
-    // XXX: Assuming grading is the performance problem, adjust logic so it
     ////////////////////////////////////////////////////////////////////////////
     // Slot coverage: What percentage of the total number of slots in the
     // schedule have been filled?
