@@ -20,12 +20,14 @@ export interface OutboundProgressData {
 }
 
 export interface OutboundResultData {
-    schedules: SeaSched.Schedule[]
+    schedule: SeaSched.Schedule
 }
 
+export interface OutboundFinishData {}
+
 export interface OutboundMessage {
-    type: 'progress'|'results'
-    data: OutboundProgressData|OutboundResultData
+    type: 'progress'|'result'|'finish'
+    data: OutboundProgressData|OutboundResultData|OutboundFinishData
 }
 
 onmessage = function (ev) {
@@ -220,12 +222,25 @@ onmessage = function (ev) {
         }
     }
 
-    // Send the final results back to the caller
-    const response: OutboundMessage = {
-        type: 'results',
-        data: {
-            schedules
+    // Send the final results back to the caller, one at a time so the bulk
+    // transfer doesn't freeze the UI thread
+    for (const schedule of schedules) {
+        const response: OutboundMessage = {
+            type: 'result',
+            data: {
+                schedule
+            }
         }
+        this.postMessage(response)
     }
-    this.postMessage(response)
+
+    // With a slight delay to give time for the results to be processed, send a
+    // final message indicating the thread's work is complete
+    this.setTimeout(() => {
+        const response: OutboundMessage = {
+            type: 'finish',
+            data: {}
+        }
+        this.postMessage(response)
+    }, 500)
 }

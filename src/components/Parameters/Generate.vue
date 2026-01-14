@@ -200,17 +200,18 @@ async function generate() {
                     generationProgress.value += data.value
                     break
                 }
-                case 'results': {
+                case 'result': {
                     const data = message.data as OutboundResultData
-                    for (const s of data.schedules) {
-                        // Results are deduplicated within the generation
-                        // worker, but we make this check in case the same
-                        // result is produced by different threads
-                        const hash = util.getScheduleHash(s)
-                        if (!results.scheduleHashes.includes(hash)) {
-                            results.addSchedule(s)
-                        }
+                    // Results are deduplicated within the generation worker,
+                    // but we make this check in case the same result is
+                    // produced by different threads
+                    const hash = util.getScheduleHash(data.schedule)
+                    if (!results.scheduleHashes.includes(hash)) {
+                        results.addSchedule(data.schedule)
                     }
+                    break
+                }
+                case 'finish': {
                     completedThreads++
                     if (completedThreads === numThreads) {
                         finish()
