@@ -476,6 +476,14 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
         }
     }
 
+    // For optional slots, add the special "no assignment" worker ID since that
+    // is a valid option to consider. Whether or not it's a good option is
+    // deferred to the grading process. We don't do this for required slots
+    // because there's no value in doing so like there is for optional ones.
+    if (gs.slot.isRequired === false) {
+        workerAffinities.push({ workerId: 0, affinity: AssignmentAffinity.Neutral })
+    }
+
     // Don't consider any workers who had at least one "disallowed" affinity,
     // and if there are any workers with a required affinity, only consider them
     const disallowedWorkersIds = workerAffinities
