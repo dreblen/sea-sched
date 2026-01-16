@@ -3,6 +3,8 @@ import * as util from '@/util'
 
 import { AssignmentAffinity } from '@/types'
 
+import random from 'random'
+
 export interface InboundMessage {
     seed: number
     events: SeaSched.ScheduleEvent[]
@@ -111,6 +113,20 @@ onmessage = function (ev) {
                 })
             }
 
+            // Below, we adjust which slot we start assignments from based on
+            // the seed, but it's important to know how many times we've looped
+            // back around to the first slot in order to reduce repeated
+            // schedules.
+            const slotCycle = Math.floor(seed / generationSlots.length)
+
+            // We want some entropy in our selections, so we use a random value
+            // for part of the logic, but for good coverage, we don't want it to
+            // be an uncontrolled random value. Instead, we seed the generator
+            // based on the slot cycle so that each starting point will have a
+            // chance at the same random series, then the next cycle will use a
+            // different series.
+            const rng = random.clone(slotCycle)
+
             // Process required slots first, then optional
             const sets = [
                 generationSlots.filter((gs) => gs.slot.isRequired === true),
@@ -148,6 +164,13 @@ onmessage = function (ev) {
                             .filter((sc) => sc.count === lowestCount)
                             .map((sc) => sc.workerId)
 
+                        // Make sure the non-assignment ID is always considered
+                        // as a low-count "worker" since we don't need to worry
+                        // about balance calculations for these
+                        if (!lowCountWorkerIds.includes(0)) {
+                            lowCountWorkerIds.push(0)
+                        }
+
                         // Try to assign to one of our low-count workers
                         const lowCountWorkerMatches = [] as number[]
                         for (const id of lowCountWorkerIds) {
@@ -156,12 +179,12 @@ onmessage = function (ev) {
                             }
                         }
                         if (lowCountWorkerMatches.length > 0) {
-                            assignedWorkerId = lowCountWorkerMatches[(seed + j) % lowCountWorkerMatches.length]
+                            assignedWorkerId = rng.choice(lowCountWorkerMatches)
                         }
 
                         // Otherwise, pick one of our available workers
                         if (assignedWorkerId === undefined) {
-                            assignedWorkerId = eligible[(seed + j) % eligible.length]?.workerId
+                            assignedWorkerId = rng.choice(eligible)?.workerId
                         }
 
                         // Store the calculated affinity no matter what
