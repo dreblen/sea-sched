@@ -1,6 +1,8 @@
 import type * as SeaSched from '@/types'
 import * as util from '@/util'
 
+import { AssignmentAffinity } from '@/types'
+
 export interface InboundMessage {
     seed: number
     events: SeaSched.ScheduleEvent[]
@@ -56,6 +58,11 @@ onmessage = function (ev) {
                 // of trying to look up a real worker ID, since 0 = no worker
                 if (digit === 0) {
                     gs.slot.workerId = 0
+                    if (gs.slot.isRequired) {
+                        gs.slot.affinity = AssignmentAffinity.Disallowed
+                    } else {
+                        gs.slot.affinity = AssignmentAffinity.Neutral
+                    }
                     continue
                 }
 
@@ -65,6 +72,11 @@ onmessage = function (ev) {
                 const workerId = message.workers[digit - 1]?.id
                 if (workerId === undefined) {
                     gs.slot.workerId = 0
+                    if (gs.slot.isRequired) {
+                        gs.slot.affinity = AssignmentAffinity.Disallowed
+                    } else {
+                        gs.slot.affinity = AssignmentAffinity.Neutral
+                    }
                     continue
                 }
 
@@ -72,6 +84,11 @@ onmessage = function (ev) {
                     .find((ew) => ew.workerId === workerId)
                 if (eligibleWorker === undefined) {
                     gs.slot.workerId = 0
+                    if (gs.slot.isRequired) {
+                        gs.slot.affinity = AssignmentAffinity.Disallowed
+                    } else {
+                        gs.slot.affinity = AssignmentAffinity.Neutral
+                    }
                     continue
                 }
 
