@@ -466,18 +466,18 @@ export const useSetupStore = defineStore('setup', () => {
         gradeComponents.value.push({
             id: GradeComponentType.SlotCoverageRequired,
             name: 'Required Slot Coverage',
-            weight: 65,
+            weight: 60,
         })
         gradeComponents.value.push({
             id: GradeComponentType.SlotCoverageOptional,
             name: 'Optional Slot Coverage',
-            weight: 10,
+            weight: 2.5,
         })
     
         gradeComponents.value.push({
             id: GradeComponentType.BalanceCount,
             name: 'Balance: Count',
-            weight: 2.5,
+            weight: 10,
         })
         gradeComponents.value.push({
             id: GradeComponentType.BalanceSpacing,
@@ -499,7 +499,7 @@ export const useSetupStore = defineStore('setup', () => {
         gradeComponents.value.push({
             id: GradeComponentType.TagAffinity,
             name: 'General Slot Affinity',
-            weight: 15,
+            weight: 20,
         })
     }
 
