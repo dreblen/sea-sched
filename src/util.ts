@@ -843,8 +843,8 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         const slotsStandardDeviation = getStandardDeviation(numUniqueSlotsPerWorker)
 
         // - Finalize our grade
-        let shiftPortion = (avgUniqueShifts - shiftsStandardDeviation) / numUniqueShifts
-        let slotPortion = (avgUniqueSlots - slotsStandardDeviation) / numUniqueSlots
+        let shiftPortion = (avgUniqueShifts - (shiftsStandardDeviation / numUniqueShifts)) / numUniqueShifts
+        let slotPortion = (avgUniqueSlots - (slotsStandardDeviation / numUniqueSlots)) / numUniqueSlots
         if (isNaN(shiftPortion) || isNaN(slotPortion)) {
             // This will happen in the one comprehensive-generation scenario
             // described above regarding balance. If this happens, we want to
