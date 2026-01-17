@@ -758,7 +758,7 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         }
 
         // - Finalize our grade
-        let numAssignmentPortion = (avgNumAssignment - numAssignmentStandardDeviation) / avgNumAssignment
+        let numAssignmentPortion = (avgNumAssignment - (numAssignmentStandardDeviation / gss.length)) / avgNumAssignment
         if (isNaN(numAssignmentPortion)) {
             // This would happen only for the one comprehensive-method iteration
             // that assigns no workers to any slots. This is an objectively bad
