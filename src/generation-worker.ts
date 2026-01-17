@@ -212,8 +212,8 @@ onmessage = function (ev) {
 
         // If a previous iteration has produced the same schedule, don't keep
         // it again
-        const hash = util.getScheduleHash(schedule)
-        if (scheduleHashes.includes(hash)) {
+        schedule.hash = util.getScheduleHash(schedule)
+        if (scheduleHashes.includes(schedule.hash)) {
             shouldKeepResult = false
         }
 
@@ -226,7 +226,7 @@ onmessage = function (ev) {
         // Add the schedule to our result list if we still want to keep it
         if (shouldKeepResult) {
             schedules.push(schedule)
-            scheduleHashes.push(hash)
+            scheduleHashes.push(schedule.hash)
         }
 
         // If we've reached our qualified result limit, either stop generating

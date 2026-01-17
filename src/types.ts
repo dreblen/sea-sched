@@ -197,6 +197,7 @@ export interface Schedule extends Common {
     steps: ScheduleStep[]
     grade?: ScheduleGrade
     notesConverted?: boolean
+    hash?: string
 }
 
 ////////////////////////////////////////////////////////////////////////////////

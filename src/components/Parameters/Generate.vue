@@ -167,8 +167,7 @@ async function generate() {
                     // Results are deduplicated within the generation worker,
                     // but we make this check in case the same result is
                     // produced by different threads
-                    const hash = util.getScheduleHash(data.schedule)
-                    if (!results.scheduleHashes.includes(hash)) {
+                    if (!results.scheduleHashes.includes(data.schedule.hash)) {
                         results.addSchedule(data.schedule)
                     }
                     break

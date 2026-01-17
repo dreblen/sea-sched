@@ -337,6 +337,13 @@ function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number)
                             </v-table>
                         </v-col>
                     </v-row>
+                    <v-row>
+                        <v-col>
+                            <span class="text-caption">
+                                Reference #{{ (schedule as Schedule).hash }}
+                            </span>
+                        </v-col>
+                    </v-row>
                 </v-container>
             </template>
         </template>
