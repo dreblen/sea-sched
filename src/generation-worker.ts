@@ -56,6 +56,9 @@ onmessage = function (ev) {
                     continue
                 }
 
+                // Store the sequence used to generate the schedule
+                gs.slot.index = j
+
                 // If the assigned worker is 0, use that value directly instead
                 // of trying to look up a real worker ID, since 0 = no worker
                 if (digit === 0) {
@@ -128,6 +131,7 @@ onmessage = function (ev) {
             const rng = random.clone(slotCycle)
 
             // Process required slots first, then optional
+            let slotIndex = 0
             const sets = [
                 generationSlots.filter((gs) => gs.slot.isRequired === true),
                 generationSlots.filter((gs) => gs.slot.isRequired === false)
@@ -143,6 +147,9 @@ onmessage = function (ev) {
 
                 for (let j = 0; j< set.length; j++) {
                     const gs = set[j] as util.GenerationSlot
+
+                    // Store the sequence used to generate the schedule
+                    gs.slot.index = slotIndex
 
                     // If this slot already had an assignment in the base schedule,
                     // keep it and move on
@@ -203,6 +210,9 @@ onmessage = function (ev) {
                     if (sc) {
                         sc.count++
                     }
+
+                    // Prepare for the next iteration
+                    slotIndex++
                 }
             }
         }

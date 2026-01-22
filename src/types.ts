@@ -140,6 +140,7 @@ export interface ScheduleSlot extends Tagged {
     workerId?: number // 0 = Intentionally empty, undefined = Not evaluated
     affinity?: AssignmentAffinity
     affinityNotes?: string[]
+    index?: number
 }
 
 export interface ScheduleShift extends Tagged {
@@ -159,8 +160,7 @@ export interface ScheduleMonth extends ScopeSegment {
     weeks: ScheduleWeek[]
 }
 
-export interface ScheduleStep {
-    id: number
+export interface ScheduleStep extends Common {
     sequence: number
     eventId: number
     shiftId: number

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
-import type { Schedule, ScheduleEvent, ScheduleMonth, ScheduleWeek, ScopeSegment } from '@/types'
+import type { Schedule, ScheduleEvent, ScheduleMonth, ScheduleStep, ScheduleWeek, ScopeSegment } from '@/types'
 import { AssignmentAffinity, AssignmentAffinityType } from '@/types'
 
 import { useSetupStore } from '@/stores/setup'
@@ -60,11 +60,20 @@ const uniqueShiftNames = computed(() => {
     return names
 })
 
+const selectedScheduleSteps = ref<number[]>([])
+
 function onCurrentScheduleChange(id?: number) {
+    // No matter what, clear out any step selection
+    selectedScheduleSteps.value = []
+
+    // Try to find the new schedule to work with
     const schedule = results.schedules.find((s) => s.id === id)
     if (schedule === undefined) {
+        updateCurrentStepData(null)
         return
     }
+
+    updateCurrentStepData(schedule)
 
     // Make sure this schedule has had its tag-related affinity notes converted
     // from IDs into names. We don't do this in bulk to improve performance when
@@ -214,6 +223,70 @@ function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number)
         (slot as HTMLElement).style.backgroundColor = targetValue
     }
 }
+
+const currentScheduleStepIds = ref<number[]>([])
+const currentScheduleStepCount = computed(() => currentScheduleStepIds.value?.length)
+const areAllScheduleStepsSelected = computed(() => selectedScheduleSteps.value.length === currentScheduleStepCount.value)
+const isScheduleStepSelectionIndeterminate = computed(() => areAllScheduleStepsSelected.value === false && selectedScheduleSteps.value.length > 0)
+
+function populateScheduleSteps(id: number) {
+    const schedule = results.schedules.find((s) => s.id === id)
+    if (schedule === undefined) {
+        return
+    }
+
+    if (schedule.steps.length > 0) {
+        return
+    }
+
+    // Generate schedule steps from the schedule's slot index values
+    let newId = 1
+    for (const event of schedule.events) {
+        for (const shift of event.shifts) {
+            for (const slot of shift.slots) {
+                const worker = setup.workers.find((w) => w.id === slot.workerId)
+
+                schedule.steps.push({
+                    id: newId++,
+                    name: `${(slot.index as number) + 1}. ${event.name}: ${shift.name} - ${slot.name} - ${worker?.name || 'N/A'}`,
+                    sequence: slot.index as number,
+                    eventId: event.id,
+                    shiftId: shift.id,
+                    workerId: slot.workerId
+                })
+            }
+        }
+    }
+
+    // Sort the results so they appear in the proper sequence order
+    schedule.steps.sort((a,b) => {
+        if (a.sequence < b.sequence) {
+            return -1
+        }
+        if (a.sequence > b.sequence) {
+            return 1
+        }
+        return 0
+    })
+
+    updateCurrentStepData(schedule)
+}
+
+function updateCurrentStepData(schedule: Schedule|null) {
+    if (schedule === null) {
+        currentScheduleStepIds.value = []
+    } else {
+        currentScheduleStepIds.value = schedule.steps.map((s) => s.id)
+    }
+}
+
+function onToggleSelectAllScheduleSteps(newValue: boolean|null) {
+    if (newValue === true) {
+        selectedScheduleSteps.value = currentScheduleStepIds.value
+    } else {
+        selectedScheduleSteps.value = []
+    }
+}
 </script>
 
 <template>
@@ -293,6 +366,9 @@ function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number)
                                                     :class="[`month-${month.id}`,`week-${week.id}`]"
                                                 >
                                                     <p v-for="slot in event.shifts.find((s) => s.name === name)?.slots" :key="slot.id">
+                                                        <span v-for="step in (schedule as Schedule).steps.filter((s) => s.sequence === slot.index)">
+                                                            <v-icon v-if="selectedScheduleSteps.includes(step.id)">mdi-checkbox-outline</v-icon>
+                                                        </span>
                                                         {{ slot.name }}:
                                                         <v-hover v-slot="{ isHovering, props }">
                                                             <v-tooltip
@@ -335,6 +411,56 @@ function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number)
                                     </template>
                                 </tbody>
                             </v-table>
+                        </v-col>
+                    </v-row>
+                    <v-row>
+                        <v-col cols="12">
+                            <h1 class="text-h4">Generation Steps</h1>
+                        </v-col>
+                        <v-col v-if="(schedule as Schedule).steps.length === 0">
+                            <v-btn
+                                @click="populateScheduleSteps(schedule.id)"
+                                color="primary"
+                            >
+                                Load Step Data
+                            </v-btn>
+                        </v-col>
+                        <v-col v-else cols="12">
+                            <v-card variant="outlined">
+                                <v-card-actions>
+                                    <v-row>
+                                        <v-col class="pb-0" cols="12">
+                                            <v-checkbox
+                                                label="Select All/None"
+                                                hide-details
+                                                :model-value="areAllScheduleStepsSelected"
+                                                :indeterminate="isScheduleStepSelectionIndeterminate"
+                                                @update:model-value="onToggleSelectAllScheduleSteps"
+                                            />
+                                        </v-col>
+                                    </v-row>
+                                </v-card-actions>
+                                <v-list
+                                    v-model:selected="selectedScheduleSteps"
+                                    select-strategy="independent"
+                                    max-height="250px"
+                                    style="overflow-y: scroll"
+                                >
+                                    <v-list-item
+                                        v-for="step in (schedule as Schedule).steps"
+                                        :key="step.id"
+                                        :title="step.name"
+                                        :value="step.id"
+                                    >
+                                        <template #prepend="{ isSelected, select }">
+                                            <v-checkbox-btn
+                                                :model-value="isSelected"
+                                                @update:model-value="select"
+                                            />
+                                        </template>
+                                    </v-list-item>
+                                </v-list>
+                            </v-card>
                         </v-col>
                     </v-row>
                     <v-row>
