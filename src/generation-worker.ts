@@ -155,7 +155,7 @@ onmessage = function (ev) {
                     const gs = set[j] as util.GenerationSlot
 
                     // Store the sequence used to generate the schedule
-                    gs.slot.index = slotIndex
+                    gs.slot.index = slotIndex++
 
                     // If this slot already had an assignment in the base schedule,
                     // keep it and move on
@@ -216,9 +216,6 @@ onmessage = function (ev) {
                     if (sc) {
                         sc.count++
                     }
-
-                    // Prepare for the next iteration
-                    slotIndex++
                 }
             }
         }
