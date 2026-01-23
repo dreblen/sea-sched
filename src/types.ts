@@ -164,6 +164,7 @@ export interface ScheduleStep extends Common {
     sequence: number
     eventId: number
     shiftId: number
+    slotId: number
     workerId?: number
 }
 

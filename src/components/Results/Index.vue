@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-import type { Schedule, ScheduleEvent, ScheduleMonth, ScheduleStep, ScheduleWeek, ScopeSegment } from '@/types'
+import type { Schedule, ScheduleEvent, ScheduleMonth, ScheduleWeek, ScopeSegment } from '@/types'
 import { AssignmentAffinity, AssignmentAffinityType } from '@/types'
 
 import { useSetupStore } from '@/stores/setup'
+import { useParametersStore } from '@/stores/parameters'
 import { useResultsStore } from '@/stores/results'
 
 import * as util from '@/util'
 
 import ListToDetail from '../ListToDetail.vue'
 
+const router = useRouter()
+
 const setup = useSetupStore()
+const parameters = useParametersStore()
 const results = useResultsStore()
 
 function getColorForGrade(gradeValue?: number) {
@@ -252,6 +257,7 @@ function populateScheduleSteps(id: number) {
                     sequence: slot.index as number,
                     eventId: event.id,
                     shiftId: shift.id,
+                    slotId: slot.id,
                     workerId: slot.workerId
                 })
             }
@@ -286,6 +292,39 @@ function onToggleSelectAllScheduleSteps(newValue: boolean|null) {
     } else {
         selectedScheduleSteps.value = []
     }
+}
+
+function onUseStepsForNewSchedule(schedule: Schedule) {
+    // If there are no selected steps, it shouldn't be possible to call this
+    // method, and there's nothing to do
+    if (selectedScheduleSteps.value.length === 0) {
+        return
+    }
+
+    // Get a flat version of the reference schedule so we can find slots easily
+    // based on step IDs
+    const gss = util.newGenerationSlots(schedule.events)
+
+    // Get a version of this schedule with only the slot assignments from the
+    // selected generation steps
+    const newSchedule = util.newSchedule(schedule.events)
+    const newGss = util.newGenerationSlots(newSchedule.events)
+    for (const step of schedule.steps.filter((s) => selectedScheduleSteps.value.includes(s.id))) {
+        const gs = gss.find((gs) => gs.event.id === step.eventId && gs.shift.id === step.shiftId && gs.slot.id === step.slotId)
+        const newGs = newGss.find((gs) => gs.event.id === step.eventId && gs.shift.id === step.shiftId && gs.slot.id === step.slotId)
+        if (gs === undefined || newGs === undefined) {
+            continue
+        }
+
+        newGs.slot.workerId = gs.slot.workerId
+        newGs.slot.affinity = gs.slot.affinity
+        newGs.slot.affinityNotes = gs.slot.affinityNotes
+    }
+
+    // Save our new schedule to the parameters store so it can be referenced for
+    // new schedule generations
+    parameters.baseSchedule = newSchedule
+    router.push('/parameters')
 }
 </script>
 
@@ -460,6 +499,19 @@ function onToggleSelectAllScheduleSteps(newValue: boolean|null) {
                                         </template>
                                     </v-list-item>
                                 </v-list>
+                                <v-card-actions>
+                                    <v-row>
+                                        <v-col>
+                                            <v-btn
+                                                @click="onUseStepsForNewSchedule(schedule as Schedule)"
+                                                :disabled="selectedScheduleSteps.length === 0"
+                                                color="primary"
+                                            >
+                                                Use Selected Steps for a New Schedule...
+                                            </v-btn>
+                                        </v-col>
+                                    </v-row>
+                                </v-card-actions>
                             </v-card>
                         </v-col>
                     </v-row>

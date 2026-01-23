@@ -77,7 +77,7 @@ export function getMonthsAndWeeksFromDateRange(dateStart: string, dateEnd: strin
 // Helpers for managing events in stores
 ////////////////////////////////////////////////////////////////////////////////
 
-import type { GenericEvent, GenericShift, GenericSlot, TagAffinity, TagType } from '@/types'
+import type { GenericEvent, GenericShift, GenericSlot, Scope, TagAffinity, TagType } from '@/types'
 
 export interface EventManagementStore {
     addEvent: { (): GenericEvent|void }
@@ -186,7 +186,7 @@ export function removeShiftSlot(events: GenericEvent[], eventId?: number, shiftI
 // Helpers for schedule generation
 ////////////////////////////////////////////////////////////////////////////////
 
-import type { EligibleWorker, GradeComponent, ScopeEvent, ScheduleGrade, Schedule, ScheduleEvent, ScheduleShift, ScheduleSlot, TagAffinityMapMap, Worker } from '@/types'
+import type { EligibleWorker, GradeComponent, ScopeEvent, ScheduleGrade, Schedule, ScheduleEvent, ScheduleShift, ScheduleSlot, Tag, TagAffinityMapMap, Worker } from '@/types'
 import { AssignmentAffinity, AssignmentAffinityType, GradeComponentType } from '@/types'
 import md5 from 'md5'
 
@@ -557,6 +557,55 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
     }
 
     return results
+}
+
+export function getScopeHash(scope: Scope, tags: Tag[]) {
+    interface CoreTagged {
+        name: string
+        tags: string[]
+    }
+    interface CoreSlot extends CoreTagged {
+        groupId: number
+        isRequired: boolean
+    }
+    interface CoreShift extends CoreTagged {
+        slots: CoreSlot[]
+    }
+    interface CoreEvent extends CoreTagged {
+        shifts: CoreShift[]
+        calendarDate: string
+    }
+
+    const tagLookupMapper = (id: number): string => (tags.find((t) => t.id === id)?.name || '<invalid>')
+
+    const coreData = [] as CoreEvent[]
+    for (const event of scope.events) {
+        const newEvent: CoreEvent = {
+            name: event.name,
+            tags: event.tags.map(tagLookupMapper),
+            shifts: [],
+            calendarDate: event.calendarDate
+        }
+        for (const shift of event.shifts) {
+            const newShift: CoreShift = {
+                name: shift.name,
+                tags: shift.tags.map(tagLookupMapper),
+                slots: []
+            }
+            for (const slot of shift.slots) {
+                newShift.slots.push({
+                    name: slot.name,
+                    tags: slot.tags.map(tagLookupMapper),
+                    groupId: slot.groupId,
+                    isRequired: slot.isRequired
+                })
+            }
+            newEvent.shifts.push(newShift)
+        }
+        coreData.push(newEvent)
+    }
+
+    return md5(JSON.stringify(coreData))
 }
 
 export function getScheduleHash(schedule: Schedule) {

@@ -8,6 +8,8 @@ import * as util from '@/util'
 import { useSetupStore } from './setup'
 
 export const useResultsStore = defineStore('results', () => {
+    const scopeHash = useLocalStorage('results-scopeHash','')
+
     const schedules = useLocalStorage('results-schedules',[] as SeaSched.Schedule[])
 
     const maxSchedulesId = computed(() => schedules.value.reduce((p, c) => (p > c.id) ? p : c.id, 0))
@@ -72,6 +74,7 @@ export const useResultsStore = defineStore('results', () => {
     }
 
     return {
+        scopeHash,
         schedules,
         scheduleHashes,
         addSchedule,

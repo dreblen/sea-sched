@@ -21,6 +21,8 @@ export const useParametersStore = defineStore('parameters', () => {
         months: []
     })
 
+    const scopeHash = computed(() => util.getScopeHash(scope.value, setup.tags))
+
     function resetScope() {
         scope.value = {
             id: 1,
@@ -296,9 +298,13 @@ export const useParametersStore = defineStore('parameters', () => {
     const overallGradeThreshold = ref(90)
     const resultThreshold = ref(25)
 
+    const baseSchedule = ref<SeaSched.Schedule>()
+    const useBaseSchedule = ref(false)
+
     return {
         currentStep,
         scope,
+        scopeHash,
         resetScope,
         addEvent,
         removeEvent,
@@ -314,5 +320,7 @@ export const useParametersStore = defineStore('parameters', () => {
         permutationThreshold,
         overallGradeThreshold,
         resultThreshold,
+        baseSchedule,
+        useBaseSchedule,
     }
 })

@@ -84,6 +84,9 @@ const isComprehensiveForMessage = computed(() => isComprehensiveAllowed.value &&
 const isStopShortForMessage = computed(() => parameters.isStopShort && !parameters.isComprehensive)
 const permutationThresholdForMessage = computed(() => Math.min(parameters.permutationThreshold, numPermutations))
 
+const hasScopeHashChanged = computed(() => parameters.scopeHash !== results.scopeHash)
+const useBaseScheduleForMessage = computed(() => parameters.useBaseSchedule && !hasScopeHashChanged.value)
+
 const isGenerating = ref(false)
 const generationProgress = ref(0)
 const isCancelling = ref(false)
@@ -98,16 +101,42 @@ async function generate() {
     await nextTick()
 
     // Clear out any previous results
+    results.scopeHash = util.getScopeHash(parameters.scope, setup.tags)
     results.clearSchedules()
     results.setScopeSegments(parameters.scope.weeks, parameters.scope.months)
     results.setGradeComponents(setup.gradeComponents)
     results.setTags(setup.tags)
 
-    // Establish a base of required worker assignments that can be a starting
-    // point for every schedule attempt
+    // Establish a base of prefilled slot assignments that can be a starting
+    // point for every schedule attempt:
     const baseSchedule = util.newSchedule(eligibleEvents)
     const baseGenerationSlots = util.newGenerationSlots(baseSchedule.events)
+
+    // - From a previously generated schedule's selected steps
+    if (useBaseScheduleForMessage.value && parameters.baseSchedule) {
+        const gss = util.newGenerationSlots(parameters.baseSchedule.events)
+        for (const gs of gss.filter((gs) => gs.slot.workerId !== undefined)) {
+            const target = baseGenerationSlots.find((t) => t.event.id === gs.event.id && t.shift.id === gs.shift.id && t.slot.id === gs.slot.id)
+            if (target === undefined) {
+                continue
+            }
+
+            target.slot.workerId = gs.slot.workerId
+            target.slot.affinity = gs.slot.affinity
+            target.slot.affinityNotes = gs.slot.affinityNotes
+        }
+
+        // Clear out any stored base schedule now that it has been used
+        parameters.baseSchedule = undefined
+    }
+
+    // - From de facto assignments by process of elimination
     for (const slot of baseGenerationSlots) {
+        // Skip any slots handled by the previous logic
+        if (slot.slot.workerId !== undefined) {
+            continue
+        }
+
         let eligible = util.getEligibleWorkersForSlot(slot, baseSchedule, activeWorkers, setup.affinitiesByTagTag)
         if (eligible.length === 1) {
             slot.slot.workerId = eligible[0]?.workerId
@@ -305,6 +334,23 @@ watchEffect(() => {
                 label="Maximum Schedules"
                 :min="1"
             />
+        </v-col>
+    </v-row>
+    <v-row v-if="parameters.baseSchedule">
+        <v-col>
+            <v-checkbox
+                v-model="parameters.useBaseSchedule"
+                label="Use stored steps from the Results tab as a starting point for all schedules?"
+                :disabled="hasScopeHashChanged"
+                color="primary"
+                hide-details
+            />
+            <span v-if="hasScopeHashChanged" class="text-caption">
+                You cannot use the stored steps because the parameter events are
+                not the same as they were when the steps were created. If you
+                adjust the parameter events to match again, this option will be
+                re-enabled.
+            </span>
         </v-col>
     </v-row>
     <v-row justify="center">
