@@ -20,6 +20,19 @@ const setup = useSetupStore()
 const parameters = useParametersStore()
 const results = useResultsStore()
 
+const sortedWorkers = computed(() => {
+    const workers = [...setup.workers].sort((a,b) => {
+        if (a.name < b.name) {
+            return -1
+        }
+        if (a.name > b.name) {
+            return 1
+        }
+        return 0
+    })
+    return workers
+})
+
 function getColorForGrade(gradeValue?: number) {
     if (gradeValue === undefined) {
         return
@@ -179,7 +192,7 @@ function getScheduleByMonthAndWeek(schedule: Schedule) {
     return months
 }
 
-function getNumAssignmentsForWorker(schedule: Schedule, calendarDate: string, workerId?: number) {
+function getNumAssignmentsForWorker(schedule: Schedule, workerId?: number, calendarDate?: string) {
     // Define a function that can be used to reduce a list of schedule events
     // into the number of assignments for the specified worker in that list
     const eventReducer = (t: number, e: ScheduleEvent) =>
@@ -189,20 +202,39 @@ function getNumAssignmentsForWorker(schedule: Schedule, calendarDate: string, wo
             ),0
         )
     
-    // Get the number of assignments in total, by month, and by week
+    // Get the number of assignments in total
     const total = schedule.events.reduce(eventReducer,0)
 
-    const targetMonth = results.months.find((m) => calendarDate >= m.dateStart && calendarDate <= m.dateEnd) as ScopeSegment
-    const inMonth = schedule.events
-        .filter((e) => e.calendarDate >= targetMonth.dateStart && e.calendarDate <= targetMonth.dateEnd)
-        .reduce(eventReducer,0)
+    // If we have a calendar date to work with, try to get the number of
+    // assignments in that date's month and week
+    let inMonth = 0
+    let inWeek = 0
+    if (calendarDate !== undefined) {
+        const targetMonth = results.months.find((m) => calendarDate >= m.dateStart && calendarDate <= m.dateEnd)
+        if (targetMonth !== undefined) {
+            inMonth = schedule.events
+                .filter((e) => e.calendarDate >= targetMonth.dateStart && e.calendarDate <= targetMonth.dateEnd)
+                .reduce(eventReducer,0)
+        }
 
-    const targetWeek = results.weeks.find((w) => calendarDate >= w.dateStart && calendarDate <= w.dateEnd) as ScopeSegment
-    const inWeek = schedule.events
-        .filter((e) => e.calendarDate >= targetWeek.dateStart && e.calendarDate <= targetWeek.dateEnd)
-        .reduce(eventReducer,0)
+        const targetWeek = results.weeks.find((w) => calendarDate >= w.dateStart && calendarDate <= w.dateEnd)
+        if (targetWeek !== undefined) {
+            inWeek = schedule.events
+                .filter((e) => e.calendarDate >= targetWeek.dateStart && e.calendarDate <= targetWeek.dateEnd)
+                .reduce(eventReducer,0)
+        }
+    }
 
-    return `${total} / ${inMonth} / ${inWeek}`
+    return {
+        total,
+        month: inMonth,
+        week: inWeek,
+    }
+}
+
+function getNumAssignmentsForWorkerString(schedule: Schedule, workerId?: number, calendarDate?: string) {
+    const details = getNumAssignmentsForWorker(schedule, workerId, calendarDate)
+    return `${details.total} / ${details.month} / ${details.week}`
 }
 
 function onShiftMouseEnterOrLeave(type: 'enter'|'leave', monthId: number, weekId: number) {
@@ -327,7 +359,10 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
                 <v-container>
                     <v-row>
                         <v-col>
-                            <v-expansion-panels>
+                            <v-expansion-panels
+                                variant="accordion"
+                                multiple
+                            >
                                 <v-expansion-panel>
                                     <v-expansion-panel-title>
                                         <v-chip :color="getColorForGrade((schedule as Schedule).grade?.overall)">
@@ -344,6 +379,23 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
                                             </v-col>
                                             <v-col v-for="componentDefinition of results.gradeComponents.filter((gc) => gc.id === component.componentId)">
                                                 {{ componentDefinition.name }} (Weight = {{ componentDefinition.weight }}%)
+                                            </v-col>
+                                        </v-row>
+                                    </v-expansion-panel-text>
+                                </v-expansion-panel>
+                                <v-expansion-panel>
+                                    <v-expansion-panel-title>
+                                        Worker Summaries...
+                                    </v-expansion-panel-title>
+                                    <v-expansion-panel-text>
+                                        <v-row>
+                                            <v-col v-for="worker of sortedWorkers" :class="!worker.isActive ? 'text-disabled' : ''">
+                                                <name-highlighter
+                                                    :highlight-class-name="`worker-${worker.id}`"
+                                                    highlight-color="#ff0"
+                                                >
+                                                    {{ worker.name }}
+                                                </name-highlighter>:&nbsp;{{ getNumAssignmentsForWorker(schedule as Schedule, worker.id).total }}
                                             </v-col>
                                         </v-row>
                                     </v-expansion-panel-text>
@@ -422,7 +474,7 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
                                                                 </name-highlighter>
                                                                 <template v-if="isHovering">
                                                                     <v-chip size="small" density="compact">
-                                                                        {{ getNumAssignmentsForWorker(schedule as Schedule, event.calendarDate, slot.workerId) }}
+                                                                        {{ getNumAssignmentsForWorkerString(schedule as Schedule, slot.workerId, event.calendarDate) }}
                                                                     </v-chip>
                                                                 </template>
                                                                 <template v-else>
