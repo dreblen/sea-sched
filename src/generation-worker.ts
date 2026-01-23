@@ -41,7 +41,7 @@ onmessage = function (ev) {
     const scheduleHashes = [] as string[]
     for (let i = 0; i < message.permutationThreshold; i++) {
         const seed = message.seed + i
-        const schedule = util.newSchedule(message.events)
+        const schedule = util.newSchedule(message.events, true)
         const generationSlots = util.newGenerationSlots(schedule.events)
 
         // Comprehensive generation method
@@ -58,6 +58,12 @@ onmessage = function (ev) {
 
                 // Store the sequence used to generate the schedule
                 gs.slot.index = j
+
+                // If this slot already had an assignment in the base schedule,
+                // keep it and move on
+                if (gs.slot.workerId !== undefined) {
+                    continue
+                }
 
                 // If the assigned worker is 0, use that value directly instead
                 // of trying to look up a real worker ID, since 0 = no worker

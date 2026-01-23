@@ -192,7 +192,7 @@ import md5 from 'md5'
 
 // Create a new schedule object based on but distinct from an existing event
 // list (either from a scope or another schedule)
-export function newSchedule(events: ScopeEvent[]|ScheduleEvent[]) {
+export function newSchedule(events: ScopeEvent[]|ScheduleEvent[], shouldCopyAssignments?: boolean) {
     const schedule: Schedule = {
         id: 0,
         name: '',
@@ -218,13 +218,21 @@ export function newSchedule(events: ScopeEvent[]|ScheduleEvent[]) {
             }
 
             for (const slot of shift.slots) {
-                newShift.slots.push({
+                const newSlot: ScheduleSlot = {
                     id: slot.id,
                     name: slot.name,
                     tags: slot.tags.slice(),
                     groupId: slot.groupId,
                     isRequired: slot.isRequired
-                })
+                }
+
+                if (shouldCopyAssignments === true) {
+                    newSlot.workerId = (slot as ScheduleSlot).workerId
+                    newSlot.affinity = (slot as ScheduleSlot).affinity
+                    newSlot.affinityNotes = (slot as ScheduleSlot).affinityNotes
+                }
+
+                newShift.slots.push(newSlot)
             }
 
             newEvent.shifts.push(newShift)
