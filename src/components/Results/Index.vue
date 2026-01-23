@@ -12,6 +12,7 @@ import { useResultsStore } from '@/stores/results'
 import * as util from '@/util'
 
 import ListToDetail from '../ListToDetail.vue'
+import NameHighlighter from '../NameHighlighter.vue'
 
 const router = useRouter()
 
@@ -217,18 +218,6 @@ function onShiftMouseEnterOrLeave(type: 'enter'|'leave', monthId: number, weekId
     }
 }
 
-function onWorkerNameMouseEnterOrLeave(type: 'enter'|'leave', workerId?: number) {
-    if (workerId === undefined) {
-        return
-    }
-
-    const workerSlots = document.getElementsByClassName(`worker-${workerId}`)
-    for (const slot of workerSlots) {
-        let targetValue = (type === 'enter') ? '#ff0' : '';
-        (slot as HTMLElement).style.backgroundColor = targetValue
-    }
-}
-
 const currentScheduleStepIds = ref<number[]>([])
 const currentScheduleStepCount = computed(() => currentScheduleStepIds.value?.length)
 const areAllScheduleStepsSelected = computed(() => selectedScheduleSteps.value.length === currentScheduleStepCount.value)
@@ -425,13 +414,12 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
                                                                 </template>
                                                             </v-tooltip>
                                                             <span v-bind="props">
-                                                                <span
-                                                                    :class="`worker-${slot.workerId}`"
-                                                                    @mouseenter="onWorkerNameMouseEnterOrLeave('enter',slot.workerId)"
-                                                                    @mouseleave="onWorkerNameMouseEnterOrLeave('leave',slot.workerId)"
+                                                                <name-highlighter
+                                                                    :highlight-class-name="`worker-${slot.workerId}`"
+                                                                    highlight-color="#ff0"
                                                                 >
                                                                     {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
-                                                                </span>
+                                                                </name-highlighter>
                                                                 <template v-if="isHovering">
                                                                     <v-chip size="small" density="compact">
                                                                         {{ getNumAssignmentsForWorker(schedule as Schedule, event.calendarDate, slot.workerId) }}
