@@ -763,11 +763,17 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
             }
         }
 
-        // - Calcualte the standard deviation for the assignment counts and spacing,
-        // along with the baseline averages for comparison when determining the
-        // final grade
-        const avgNumAssignment = numAssignments.reduce((t,v) => t+v,0.0) / numAssignments.length
-        const numAssignmentStandardDeviation = getStandardDeviation(numAssignments)
+        // - Calculate the total number of worker assignments in the schedule
+        // and convert our per-worker counts into percentages so we can
+        // determine a normalized count balance.
+        const totalNumAssignments = numAssignments.reduce((t,v) => t+v,0.0)
+        const numAssignmentsAsPercentages = numAssignments.map((n) => n / totalNumAssignments)
+        const numAssignmentsMaxPercentage = numAssignmentsAsPercentages.reduce((p,v) => (v > p) ? v : p,0)
+        const numAssignmentsMinPercentage = numAssignmentsAsPercentages.reduce((p,v) => (v < p) ? v : p,1)
+
+        // - Calcualte the standard deviation for the assignment spacing, along
+        // with the baseline average for comparison when determining the final
+        // grade
         const avgAssignmentSpacing = avgAssignmentSpacings.reduce((t,v) => t+v,0.0) / avgAssignmentSpacings.length
         const assignmentSpacingStandardDeviation = getStandardDeviation(avgAssignmentSpacings)
 
@@ -815,8 +821,8 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         }
 
         // - Finalize our grade
-        let numAssignmentPortion = (avgNumAssignment - (numAssignmentStandardDeviation / gss.length)) / avgNumAssignment
-        if (isNaN(numAssignmentPortion)) {
+        let numAssignmentPortion = 1.0 - (numAssignmentsMaxPercentage - numAssignmentsMinPercentage)
+        if (totalNumAssignments === 0) {
             // This would happen only for the one comprehensive-method iteration
             // that assigns no workers to any slots. This is an objectively bad
             // scenario, so we downgrade the balance rating even though it's
@@ -828,7 +834,7 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
             // This would happen if every worker was assigned to only one slot,
             // which is perfect balance, or in the comprehensive-method
             // scenario described above, where we would want to downgrade.
-            if (avgNumAssignment === 0) {
+            if (totalNumAssignments === 0) {
                 assignmentSpacingPortion = 0.0
             } else {
                 assignmentSpacingPortion = 1.0
