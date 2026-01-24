@@ -313,6 +313,7 @@ export const useParametersStore = defineStore('parameters', () => {
         addShiftSlot,
         removeShiftSlot,
         templateEventIds,
+        generateScopeSegments,
         generateScope,
         removeTagReferences,
         isStopShort,

@@ -624,6 +624,14 @@ export function getScheduleHash(schedule: Schedule) {
     return md5(JSON.stringify(assignments))
 }
 
+export function serializeSchedule(schedule: Schedule) {
+    return JSON.stringify(schedule)
+}
+
+export function deserializeSchedule(json: string) {
+    return JSON.parse(json) as Schedule
+}
+
 export function getStandardDeviation(valueList: number[]) {
     const avgValue = valueList.reduce((t,v) => t+v,0.0) / valueList.length
     const deviations = valueList.map((v) => Math.pow(v - avgValue,2))

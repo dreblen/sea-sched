@@ -2,11 +2,13 @@
 import { ref } from 'vue'
 
 import ViewEdit from './ViewEdit.vue'
+import Import from './Import.vue'
 
 // Prep our list of sub-navigation options for this tab
 const currentTab = ref(0)
 const tabs = [
     { name: 'View/Edit', component: ViewEdit },
+    { name: 'Import', component: Import },
 ]
 </script>
 

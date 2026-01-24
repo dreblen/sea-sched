@@ -476,10 +476,19 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
     parameters.baseSchedule = newSchedule
     router.push('/parameters')
 }
+
+function copyScheduleExportToClipboard(schedule: Schedule) {
+    navigator.clipboard.writeText(util.serializeSchedule(schedule))
+}
 </script>
 
 <template>
-    <list-to-detail :items="results.schedules" :no-actions="true" @change="onCurrentScheduleChange">
+    <list-to-detail
+        v-if="results.schedules.length > 0"
+        :items="results.schedules"
+        :no-actions="true"
+        @change="onCurrentScheduleChange"
+    >
         <template #default="{ item: schedule }">
             <template v-if="!schedule">
                 No schedule currently selected.
@@ -748,6 +757,36 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
                         </v-col>
                     </v-row>
                     <v-row>
+                        <v-col cols="12">
+                            <h1 class="text-h4">Export Options</h1>
+                        </v-col>
+                        <v-col cols="12">
+                            <v-table>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            Use this method if you want to be
+                                            able to import the schedule into
+                                            this page again later for further
+                                            review or editing. Note that this
+                                            will only work correctly if the tag
+                                            and worker setup is the same as it
+                                            is now when you import.
+                                        </td>
+                                        <td>
+                                            <v-btn
+                                                @click="copyScheduleExportToClipboard(schedule as Schedule)"
+                                                append-icon="mdi-content-copy"
+                                            >
+                                                Copy to Clipboard
+                                            </v-btn>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </v-table>
+                        </v-col>
+                    </v-row>
+                    <v-row>
                         <v-col>
                             <span class="text-caption">
                                 Reference #{{ (schedule as Schedule).hash }}
@@ -791,4 +830,16 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
             </v-dialog>
         </template>
     </list-to-detail>
+    <v-container v-else>
+        <v-row>
+            <v-col>
+                <p>
+                    There are currently no results to display. You can generate
+                    results using the <router-link to="/parameters">Scheduling
+                    Parameters tab</router-link>, or you can import a previously
+                    saved result.
+                </p>
+            </v-col>
+        </v-row>
+    </v-container>
 </template>
