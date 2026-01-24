@@ -1,4 +1,6 @@
  <script setup lang="ts">
+import { onBeforeUnmount } from 'vue'
+
 const props = defineProps<{
     highlightClassName: string
     highlightColor: string
@@ -11,6 +13,12 @@ function onEnterOrLeave(type: 'enter'|'leave') {
         (tag as HTMLElement).style.backgroundColor = targetValue
     }
 }
+
+onBeforeUnmount(() => {
+    // If our component is going away, make sure we don't leave behind any
+    // highlights that won't be able to trigger a leave event on their own
+    onEnterOrLeave('leave')
+})
  </script>
 
  <template>
