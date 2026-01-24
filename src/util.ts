@@ -680,8 +680,28 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         const requiredFilled = requiredSlots.filter((gs) => gs.slot.workerId !== undefined && gs.slot.workerId !== 0).length
         const optionalFilled = optionalSlots.filter((gs) => gs.slot.workerId !== undefined && gs.slot.workerId !== 0).length
 
-        const requiredPorition = 100.0 * requiredFilled / requiredSlots.length
-        const optionalPortion = 100.0 * optionalFilled / optionalSlots.length
+        let requiredPorition = 100.0 * requiredFilled / requiredSlots.length
+        let optionalPortion = 100.0 * optionalFilled / optionalSlots.length
+
+        // If either of these have zero slots, upgrade them to 100% since it
+        // shouldn't penalize a category if it's not relevant, unless this is
+        // the one comprehensive-method scenario that assigns no workers to any
+        // slot, in which case we treat these as zeroes to push this permutation
+        // down in the results.
+        if (isNaN(requiredPorition)) {
+            if (optionalFilled > 0) {
+                requiredPorition = 100
+            } else {
+                requiredPorition = 0
+            }
+        }
+        if (isNaN(optionalPortion)) {
+            if (requiredFilled > 0) {
+                optionalPortion = 100
+            } else {
+                optionalPortion = 0
+            }
+        }
 
         grade.components.push({
             componentId: GradeComponentType.SlotCoverageRequired,
