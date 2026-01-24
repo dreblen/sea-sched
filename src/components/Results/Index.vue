@@ -671,6 +671,11 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
                     <v-row>
                         <v-col cols="12">
                             <h1 class="text-h4">Generation Steps</h1>
+                            <p class="text-caption">
+                                Note: If you make changes to the schedule before
+                                loading its steps, the original step data will
+                                be lost.
+                            </p>
                         </v-col>
                         <v-col v-if="(schedule as Schedule).steps.length === 0">
                             <v-btn
@@ -712,6 +717,17 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
                                                 :model-value="isSelected"
                                                 @update:model-value="select"
                                             />
+                                        </template>
+                                        <template #subtitle>
+                                            <template v-for="event in (schedule as Schedule).events" :key="event.id">
+                                                <template v-for="shift in event.shifts" :key="shift.id">
+                                                    <template v-for="slot in shift.slots" :key="slot.id">
+                                                        <template v-if="slot.index === step.sequence && slot.workerId !== step.workerId">
+                                                            Edited to {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
+                                                        </template>
+                                                    </template>
+                                                </template>
+                                            </template>
                                         </template>
                                     </v-list-item>
                                 </v-list>
