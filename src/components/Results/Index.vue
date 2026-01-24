@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import type { Schedule, ScheduleEvent, ScheduleMonth, ScheduleWeek, ScopeSegment } from '@/types'
+import type { EligibleWorker, Schedule, ScheduleEvent, ScheduleMonth, ScheduleSlot, ScheduleWeek, ScopeSegment, Worker } from '@/types'
 import { AssignmentAffinity, AssignmentAffinityType } from '@/types'
 
 import { useSetupStore } from '@/stores/setup'
@@ -10,6 +10,7 @@ import { useParametersStore } from '@/stores/parameters'
 import { useResultsStore } from '@/stores/results'
 
 import * as util from '@/util'
+import type { GenerationSlot } from '@/util'
 
 import ListToDetail from '../ListToDetail.vue'
 import NameHighlighter from '../NameHighlighter.vue'
@@ -82,8 +83,9 @@ const uniqueShiftNames = computed(() => {
 const selectedScheduleSteps = ref<number[]>([])
 
 function onCurrentScheduleChange(id?: number) {
-    // No matter what, clear out any step selection
+    // No matter what, clear out any step selection and editing status
     selectedScheduleSteps.value = []
+    resetActiveEdit()
 
     // Try to find the new schedule to work with
     const schedule = results.schedules.find((s) => s.id === id)
@@ -248,6 +250,133 @@ function onShiftMouseEnterOrLeave(type: 'enter'|'leave', monthId: number, weekId
         let targetValue = (type === 'enter') ? '#ffc' : '';
         (row as HTMLElement).style.backgroundColor = targetValue
     }
+}
+
+const activeEditSlot = ref<ScheduleSlot>()
+
+interface EligibleWorkerDetail extends EligibleWorker {
+    worker?: Worker
+    title?: string
+}
+const activeEditWorkerOptions = ref<EligibleWorkerDetail[]>([])
+const activeEditSelectedWorkerId = ref<number>()
+
+function onWorkerNameClick(schedule: Schedule, slot: ScheduleSlot) {
+    // Only allow editing of one slot at a time
+    if (activeEditSlot.value !== undefined) {
+        return
+    }
+
+    // Get a list of workers who can be assigned to the selected slot
+    let eligible = [] as EligibleWorkerDetail[] 
+    for (const event of schedule.events) {
+        for (const shift of event.shifts) {
+            for (const sl of shift.slots) {
+                if (sl.index === slot.index) {
+                    const gs: GenerationSlot = {
+                        event,
+                        shift,
+                        slot,
+                    }
+
+                    // Get the eligible workers from the usual logic, and add
+                    // the current assignment details since they will be
+                    // excluded from the usual consideration unless it is an
+                    // intentional non-assignment.
+                    eligible = util.getEligibleWorkersForSlot(gs, schedule, setup.workers, setup.affinitiesByTagTag)
+                    if (slot.workerId !== undefined && slot.workerId !== 0) {
+                        eligible.push({
+                            workerId: slot.workerId,
+                            affinity: slot.affinity || AssignmentAffinity.Neutral,
+                            affinityNotes: slot.affinityNotes,
+                        })
+                    }
+
+                    // Also add the option of a non-assignment if it's not
+                    // already present. It would only be missing for required
+                    // slots, so we flag it as an affinity problem.
+                    if (eligible.find((ew) => ew.workerId === 0) === undefined) {
+                        eligible.push({
+                            workerId: 0,
+                            affinity: AssignmentAffinity.Disallowed,
+                            affinityNotes: ['Worker Required'],
+                        })
+                    }
+                }
+            }
+        }
+    }
+
+    // Fill in any worker details that we can
+    for (const ew of eligible) {
+        ew.worker = setup.workers.find((w) => w.id === ew.workerId)
+    }
+
+    // Sort our results so non-assignment comes first, followed by alphabetical
+    // worker names
+    eligible.sort((a,b) => {
+        if (a.workerId === 0) {
+            return -1
+        }
+
+        if (a.worker !== undefined && b.worker === undefined) {
+            return -1
+        }
+        if (a.worker === undefined && b.worker === undefined) {
+            return 1
+        }
+        if (a.worker === undefined && b.worker === undefined) {
+            return 0
+        }
+
+        const verifiedA = a.worker as Worker
+        const verifiedB = b.worker as Worker
+        if (verifiedA.name < verifiedB.name) {
+            return -1
+        }
+        if (verifiedA.name > verifiedB.name) {
+            return 1
+        }
+
+        return 0
+    })
+
+    // Fill in final names now that we've handled worker lookups
+    for (const e of eligible) {
+        e.title = e.worker?.name || 'N/A'
+    }
+
+    // Store our results so they can be used in the app
+    activeEditSlot.value = slot
+    activeEditWorkerOptions.value = eligible
+    activeEditSelectedWorkerId.value = slot.workerId
+}
+
+function saveActiveEdit(schedule: Schedule) {
+    // This should never happen, but save further checks if it does
+    if (activeEditSlot.value === undefined) {
+        return
+    }
+
+    // Store the details of the new selection
+    const option = activeEditWorkerOptions.value.find((ew) => ew.workerId === activeEditSelectedWorkerId.value)
+    if (option !== undefined) {
+        activeEditSlot.value.workerId = option.workerId
+        activeEditSlot.value.affinity = option.affinity
+        activeEditSlot.value.affinityNotes = option.affinityNotes
+    }
+
+    // Update the grade for this schedule based on the new assignment
+    results.regradeSchedule(schedule)
+
+    // Close out the editing controls
+    resetActiveEdit()
+}
+
+function resetActiveEdit() {
+    activeEditSlot.value = undefined
+    activeEditWorkerOptions.value = []
+    activeEditSelectedWorkerId.value = undefined
 }
 
 const currentScheduleStepIds = ref<number[]>([])
@@ -466,20 +595,67 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
                                                                 </template>
                                                             </v-tooltip>
                                                             <span v-bind="props">
-                                                                <name-highlighter
-                                                                    :highlight-class-name="`worker-${slot.workerId}`"
-                                                                    highlight-color="#ff0"
-                                                                >
-                                                                    {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
-                                                                </name-highlighter>
-                                                                <template v-if="isHovering">
-                                                                    <v-chip size="small" density="compact">
-                                                                        {{ getNumAssignmentsForWorkerString(schedule as Schedule, slot.workerId, event.calendarDate) }}
-                                                                    </v-chip>
+                                                                <template v-if="slot.index !== activeEditSlot?.index">
+                                                                    <name-highlighter
+                                                                        :highlight-class-name="`worker-${slot.workerId}`"
+                                                                        highlight-color="#ff0"
+                                                                        @click="onWorkerNameClick(schedule as Schedule, slot)"
+                                                                    >
+                                                                        {{ setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A' }}
+                                                                    </name-highlighter>
+                                                                    <template v-if="isHovering">
+                                                                        <v-chip size="small" density="compact">
+                                                                            {{ getNumAssignmentsForWorkerString(schedule as Schedule, slot.workerId, event.calendarDate) }}
+                                                                        </v-chip>
+                                                                    </template>
+                                                                    <template v-else>
+                                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                                    </template>
                                                                 </template>
                                                                 <template v-else>
-                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                                    <v-select
+                                                                        v-model="activeEditSelectedWorkerId"
+                                                                        :items="activeEditWorkerOptions"
+                                                                        item-value="workerId"
+                                                                        density="compact"
+                                                                        hide-details
+                                                                    >
+                                                                        <template #item="{ item, props }">
+                                                                            <v-list-item
+                                                                                v-bind="props"
+                                                                            >
+                                                                                <template #title="{ title }">
+                                                                                    {{ title }}
+                                                                                    <v-icon
+                                                                                        v-if="item.raw.affinity !== AssignmentAffinity.Neutral"
+                                                                                        :color="getAssignmentAffinityProps(item.raw.workerId, item.raw.affinity)[0]"
+                                                                                    >
+                                                                                        {{ getAssignmentAffinityProps(item.raw.workerId, item.raw.affinity)[1] }}
+                                                                                    </v-icon>
+                                                                                </template>
+                                                                                <template #subtitle v-if="item.raw.affinityNotes && item.raw.affinityNotes.length > 0">
+                                                                                    {{ item.raw.affinityNotes.join(', ') }}
+                                                                                </template>
+                                                                            </v-list-item>
+                                                                        </template>
+                                                                        <template #prepend>
+                                                                            <v-btn
+                                                                                icon="mdi-cancel"
+                                                                                color="error"
+                                                                                density="compact"
+                                                                                @click="resetActiveEdit"
+                                                                            />
+                                                                        </template>
+                                                                        <template #append>
+                                                                            <v-btn
+                                                                                icon="mdi-check"
+                                                                                color="success"
+                                                                                density="compact"
+                                                                                @click="saveActiveEdit(schedule as Schedule)"
+                                                                            />
+                                                                        </template>
+                                                                    </v-select>
                                                                 </template>
                                                             </span>
                                                         </v-hover>

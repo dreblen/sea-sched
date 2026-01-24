@@ -25,13 +25,17 @@ export const useResultsStore = defineStore('results', () => {
         schedules.value = []
     }
 
-    function regradeSchedules() {
+    function regradeSchedule(schedule: SeaSched.Schedule) {
         const setup = useSetupStore()
         const availableWorkers = setup.workers.filter((w) => w.isActive)
         setGradeComponents(setup.gradeComponents)
 
+        schedule.grade = util.getScheduleGrade(schedule, availableWorkers, setup.tagAffinities, setup.gradeComponents)
+    }
+
+    function regradeSchedules() {
         for (const schedule of schedules.value) {
-            schedule.grade = util.getScheduleGrade(schedule, availableWorkers, setup.tagAffinities, setup.gradeComponents)
+            regradeSchedule(schedule)
         }
     }
 
@@ -79,6 +83,7 @@ export const useResultsStore = defineStore('results', () => {
         scheduleHashes,
         addSchedule,
         clearSchedules,
+        regradeSchedule,
         regradeSchedules,
         weeks,
         months,
