@@ -80,7 +80,7 @@ const numPermutations = Math.pow(numWorkers + 1, numSlots)
 
 // Basic generation controls, building off of what's found in the parameters
 const isComprehensiveAllowed = computed(() => parameters.permutationThreshold >= numPermutations)
-const isComprehensiveForMessage = computed(() => isComprehensiveAllowed.value && parameters.isComprehensive)
+const isComprehensiveForMessage = computed(() => isComprehensiveAllowed.value && (parameters.isComprehensive || parameters.permutationThreshold >= numPermutations))
 const isStopShortForMessage = computed(() => parameters.isStopShort && !parameters.isComprehensive)
 const permutationThresholdForMessage = computed(() => Math.min(parameters.permutationThreshold, numPermutations))
 
@@ -292,7 +292,7 @@ watchEffect(() => {
         <v-col>
             <v-switch
                 v-model="parameters.isStopShort"
-                :disabled="isComprehensiveForMessage"
+                :disabled="parameters.isComprehensive"
                 color="primary"
                 hint="If yes, stop generating schedules after reaching the target amount at the target grade, even if not the highest possible grade"
                 persistent-hint
