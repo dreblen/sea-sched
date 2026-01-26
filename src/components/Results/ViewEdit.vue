@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import type { EligibleWorker, Schedule, ScheduleEvent, ScheduleMonth, ScheduleSlot, ScheduleWeek, ScopeSegment, Worker } from '@/types'
+import type { EligibleWorker, Schedule, ScheduleEvent, ScheduleMonth, ScheduleShift, ScheduleSlot, ScheduleWeek, ScopeSegment, Worker } from '@/types'
 import { AssignmentAffinity, AssignmentAffinityType } from '@/types'
 
 import { useSetupStore } from '@/stores/setup'
@@ -480,6 +480,210 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
 function copyScheduleExportToClipboard(schedule: Schedule) {
     navigator.clipboard.writeText(util.serializeSchedule(schedule))
 }
+
+function copyScheduleWeeklyTableToClipboard(schedule: Schedule) {
+    // Because of the way HTML tables are built, we need to have a flattened
+    // copy of the schedule data so we can access it one <tr> or "layer" at a
+    // time rather than in its usual hierarchy.
+    interface LayerColumn {
+        week: ScopeSegment
+        event: ScheduleEvent
+        shift: ScheduleShift
+        slotGroupId: number
+        slotHtml: string
+    }
+    let layerOffset = 0
+    const layers = [] as LayerColumn[][]
+    for (const week of results.weeks) {
+        const events = schedule.events.filter((e) => e.calendarDate >= week.dateStart && e.calendarDate <= week.dateEnd)
+        for (const event of events) {
+            for (let shiftIndex = 0; shiftIndex < event.shifts.length; shiftIndex++) {
+                const shift = event.shifts[shiftIndex] as ScheduleShift
+
+                const uniqueGroupIds = [...new Set(shift.slots.map((l) => l.groupId))].sort()
+                const slotsByGroup = {} as { [groupId: number]: ScheduleSlot[]}
+                for (const slot of shift.slots) {
+                    if (slotsByGroup[slot.groupId] === undefined) {
+                        slotsByGroup[slot.groupId] = []
+                    }
+                    slotsByGroup[slot.groupId]?.push(slot)
+                }
+
+                for (let groupIdIndex = 0; groupIdIndex < uniqueGroupIds.length; groupIdIndex++) {
+                    const groupId = uniqueGroupIds[groupIdIndex] as number
+                    const layerNumber = layerOffset + shiftIndex + groupIdIndex
+                    if (layers[layerNumber] === undefined) {
+                        layers.push([])
+                    }
+
+                    const slots = slotsByGroup[groupId] as ScheduleSlot[]
+                    layers[layerNumber]?.push({
+                        week,
+                        event,
+                        shift,
+                        slotGroupId: groupId,
+                        slotHtml: slots.map((l) => `${l.name}: ${setup.workers.find((w) => w.id === l.workerId)?.name || 'N/A'}`).join('<br/>'),
+                    })
+                }
+            }
+        }
+
+        // Store the highest number of layers used for this week so we can add
+        // that value to all layer assignments on the next week cycle
+        const maxLayersInWeek = events.reduce((p,e) => {
+            const numSlotGroups = e.shifts.reduce((p,s) => {
+                const uniqueGroupIds = [...new Set(s.slots.map((l) => l.groupId))]
+                return p + uniqueGroupIds.length
+            },0)
+
+            return (numSlotGroups > p) ? numSlotGroups : p
+        },0)
+        layerOffset += maxLayersInWeek
+    }
+
+    // We now want to construct the final table, but we do this via objects to
+    // make the construction and styling logic easier
+    interface OutputColumn {
+        rowspan: number
+        html: string
+    }
+    interface OutputRow {
+        columns: OutputColumn[]
+    }
+
+    const output = [] as OutputRow[]
+
+    let lastWeekId = -1
+    let numLayersInWeek = 1
+
+    let handledEventIds = [] as number[]
+    let handledEventShiftIds = [] as string[] // "eventId|shiftId"
+    for (let layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+        const layer = layers[layerIndex] as LayerColumn[]
+        const row: OutputRow = { columns: [] }
+
+        // Skip this layer if it has no columns for some reason
+        if (layer.length === 0) {
+            continue
+        }
+
+        // Store some context information whenever we transition to a new week
+        const firstColumn = layer[0] as LayerColumn
+        if (firstColumn.week.id !== lastWeekId) {
+            lastWeekId = firstColumn.week.id
+
+            numLayersInWeek = 1
+            for (let i = layerIndex + 1; i < layers.length; i++) {
+                const nextLayer = layers[i] as LayerColumn[]
+                if (nextLayer.length === 0) {
+                    continue
+                }
+
+                const nextFirstColumn = nextLayer[0] as LayerColumn
+                if (nextFirstColumn.week.id !== lastWeekId) {
+                    break
+                }
+
+                numLayersInWeek++
+            }
+
+            handledEventIds = []
+            handledEventShiftIds = []
+        }
+
+        // Iterate the columns in the layer, making sure we account for layers
+        // that might not have as many columns
+        for (const column of layer) {
+            // Add a column for the event if this is the first time seeing it
+            if (!handledEventIds.includes(column.event.id)) {
+                row.columns.push({
+                    rowspan: numLayersInWeek,
+                    html: column.event.name,
+                })
+                handledEventIds.push(column.event.id)
+            }
+
+            // Add a column for the shift if this is the first time seeing it
+            // for the event
+            const eventShiftId = `${column.event.id}|${column.shift.id}`
+            if (!handledEventShiftIds.includes(eventShiftId)) {
+                // If there will be another shift after this one for the event,
+                // then the rowspan should match the number of slot groups for
+                // this shift
+                let rowspan = 1
+                if (column.event.shifts.filter((s) => s.id > column.shift.id).length > 0) {
+                    rowspan = [...new Set(column.shift.slots.map((l) => l.groupId))].length
+                }
+                // Otherwise, we need to fill up any remaining gap in this
+                // week's expected row count
+                else {
+                    const numRowsPreceding = column.event.shifts
+                        .filter((s) => s.id < column.shift.id)
+                        .reduce((t,s) => {
+                            const uniqueGroupIds = [...new Set(s.slots.map((l) => l.groupId))]
+                            return t + uniqueGroupIds.length
+                        },0)
+                    rowspan = numLayersInWeek - numRowsPreceding
+                }
+
+                // Add the final column content
+                row.columns.push({
+                    rowspan,
+                    html: column.shift.name,
+                })
+                handledEventShiftIds.push(eventShiftId)
+            }
+
+            // Add the slot group data, filling in the row gap as needed if this
+            // is the last slot group for the event
+            let rowspan = 1
+            const maxShiftId = column.event.shifts.reduce((p,s) => (s.id > p) ? s.id : p,0)
+            const maxSlotGroupId = column.shift.slots.reduce((p,l) => (l.groupId > p) ? l.groupId : p,0)
+            if (column.shift.id === maxShiftId && column.slotGroupId === maxSlotGroupId) {
+                const otherShiftNumRowsPreceding = column.event.shifts
+                    .filter((s) => s.id < column.shift.id)
+                    .reduce((t,s) => {
+                        const uniqueGroupIds = [...new Set(s.slots.map((l) => l.groupId))]
+                        return t + uniqueGroupIds.length
+                    },0)
+                const thisShiftGroupIdsPreceding = column.shift.slots
+                    .filter((l) => l.groupId < column.slotGroupId)
+                    .map((l) => l.groupId)
+                const thisShiftNumRowsPreceding = [...new Set(thisShiftGroupIdsPreceding)].length
+                const numRowsPreceding = otherShiftNumRowsPreceding + thisShiftNumRowsPreceding
+
+                rowspan = numLayersInWeek - numRowsPreceding
+            }
+
+            row.columns.push({
+                rowspan,
+                html: column.slotHtml
+            })
+        }
+
+        // Finish out this row of table columns
+        output.push(row)
+    }
+
+    // Construct the final HTML table
+    let html = '<table border="1">'
+    for (const row of output) {
+        html += '<tr>'
+        for (const column of row.columns) {
+            html += `<td rowspan="${column.rowspan}">${column.html}</td>`
+        }
+        html += '</tr>'
+    }
+    html += '</table>'
+
+    // Place the final table on the clipboard, preferring its rendered version
+    // but falling back to plaintext when appropriate
+    const item = new ClipboardItem({
+        'text/html': html,
+        'text/plain': html,
+    })
+    navigator.clipboard.write([item])
+}
 </script>
 
 <template>
@@ -765,17 +969,37 @@ function copyScheduleExportToClipboard(schedule: Schedule) {
                                 <tbody>
                                     <tr>
                                         <td>
-                                            Use this method if you want to be
-                                            able to import the schedule into
-                                            this page again later for further
-                                            review or editing. Note that this
-                                            will only work correctly if the tag
-                                            and worker setup is the same as it
-                                            is now when you import.
+                                            <em>Full Export:</em> Use this
+                                            method if you want to be able to
+                                            import the schedule into this page
+                                            again later for further review or
+                                            editing. Note that this will only
+                                            work correctly if the tag and worker
+                                            setup when you import is the same as
+                                            it is now.
                                         </td>
                                         <td>
                                             <v-btn
                                                 @click="copyScheduleExportToClipboard(schedule as Schedule)"
+                                                append-icon="mdi-content-copy"
+                                            >
+                                                Copy to Clipboard
+                                            </v-btn>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <em>Simple Weekly Table:</em> Use
+                                            this method to store a simple,
+                                            unformatted table with events
+                                            grouped together by calendar week.
+                                            This may be a good starting point
+                                            for a schedule published via a word
+                                            processor.
+                                        </td>
+                                        <td>
+                                            <v-btn
+                                                @click="copyScheduleWeeklyTableToClipboard(schedule as Schedule)"
                                                 append-icon="mdi-content-copy"
                                             >
                                                 Copy to Clipboard
