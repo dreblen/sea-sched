@@ -21,6 +21,10 @@ const setup = useSetupStore()
 const parameters = useParametersStore()
 const results = useResultsStore()
 
+function copyParametersStoreToClipboard() {
+    navigator.clipboard.writeText(parameters.serialize())
+}
+
 // Create a disconnected list of our scope events with any missing shifts/slots
 // excluded. This doesn't need to be reactive, because it can't change here, and
 // it will be recreated each time this component loads.
@@ -270,6 +274,20 @@ watchEffect(() => {
 </script>
 
 <template>
+    <v-row>
+        <v-col class="pb-0" cols="12" md="8">
+            If you want to preserve your parameters up to this point so you can
+            come back to them later, export it now using this option:
+        </v-col>
+        <v-col cols="12" md="4">
+            <v-btn
+                @click="copyParametersStoreToClipboard"
+                append-icon="mdi-content-copy"
+            >
+                Copy to Clipboard
+            </v-btn>
+        </v-col>
+    </v-row>
     <v-row>
         <v-col>
             Events: {{ numEvents }}

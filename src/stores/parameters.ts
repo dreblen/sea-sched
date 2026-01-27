@@ -301,6 +301,30 @@ export const useParametersStore = defineStore('parameters', () => {
     const baseSchedule = ref<SeaSched.Schedule>()
     const useBaseSchedule = ref(false)
 
+    ////////////////////////////////////////////////////////////////////////////
+    // General
+    ////////////////////////////////////////////////////////////////////////////
+
+    interface SerializedContent {
+        scope: string,
+        templateEventIds: string,
+    }
+
+    function serialize() {
+        const parts: SerializedContent = {
+            scope: JSON.stringify(scope.value),
+            templateEventIds: JSON.stringify(templateEventIds.value),
+        }
+
+        return JSON.stringify(parts)
+    }
+
+    function deserialize(json: string) {
+        const parts = JSON.parse(json) as SerializedContent
+        scope.value = JSON.parse(parts.scope)
+        templateEventIds.value = JSON.parse(parts.templateEventIds)
+    }
+
     return {
         currentStep,
         scope,
@@ -323,5 +347,7 @@ export const useParametersStore = defineStore('parameters', () => {
         resultThreshold,
         baseSchedule,
         useBaseSchedule,
+        serialize,
+        deserialize,
     }
 })

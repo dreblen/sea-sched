@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, useTemplateRef } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import type { CalendarEvent } from 'vuetify/lib/components/VCalendar/types.mjs'
 import type { VCalendar } from 'vuetify/components'
 
@@ -11,20 +11,44 @@ const emit = defineEmits({
 })
 
 const parameters = useParametersStore()
+
+const parametersImportJson = ref('')
+const isParametersImportJsonValid = computed(() => {
+    if (parametersImportJson.value.length === 0) {
+        return false
+    }
+
+    try {
+        JSON.parse(parametersImportJson.value)
+        return true
+    } catch (e) {
+        return false
+    }
+})
+function onImportParameters() {
+    parameters.deserialize(parametersImportJson.value)
+    restoreScopeRange()
+}
+
 const calendar = useTemplateRef<VCalendar>('calendar')
 const currentDate = ref(new Date())
 const events = ref([] as CalendarEvent[])
 
-// Restore our previously selected range if we have one
-if (parameters.scope.dateStart > '1900-01-01') {
-    events.value.push({
-        name: 'Selected Range',
-        start: parameters.scope.dateStart,
-        end: parameters.scope.dateEnd
-    })
+// Restore our previously selected range if we have one. We do this immediately
+// on component mount, but we also have it in a function so it can happen if the
+// user imports parameters.
+function restoreScopeRange() {
+    if (parameters.scope.dateStart > '1900-01-01') {
+        events.value.push({
+            name: 'Selected Range',
+            start: parameters.scope.dateStart,
+            end: parameters.scope.dateEnd
+        })
 
-    emit('complete')
+        emit('complete')
+    }
 }
+restoreScopeRange()
 
 const clickCounter = ref(1)
 function onDateClick(ev: Event, data: { date: string }) {
@@ -75,6 +99,41 @@ function onDateClick(ev: Event, data: { date: string }) {
 </script>
 
 <template>
+    <v-row>
+        <v-col class="pb-0" cols="12" sm="8" md="9">
+            If you've exported previous parameters, you can import them now
+            rather than going through each step again.
+        </v-col>
+        <v-col cols="12" sm="4" md="3">
+            <v-dialog max-width="500px">
+                <template #activator="{ props }">
+                    <v-btn v-bind="props">
+                        Import...
+                    </v-btn>
+                </template>
+                <template #default="{ isActive }">
+                    <v-card>
+                        <v-card-text>
+                            <v-textarea
+                                v-model="parametersImportJson"
+                                label="Paste in parameters that you have exported previously"
+                            />
+                        </v-card-text>
+                        <v-card-actions>
+                            <v-btn @click="isActive.value = false">Cancel</v-btn>
+                            <v-btn
+                                color="warning"
+                                @click="onImportParameters(); isActive.value = false"
+                                :disabled="!isParametersImportJsonValid"
+                            >
+                                Import
+                            </v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </template>
+            </v-dialog>
+        </v-col>
+    </v-row>
     <v-row justify="center">
         <v-col class="flex-shrink-1 flex-grow-0">
             <v-btn icon variant="text" @click="calendar?.prev()">
