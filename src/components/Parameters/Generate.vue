@@ -86,7 +86,7 @@ const allStats = [
     { title: 'Shifts', value: numShifts },
     { title: 'Slots', value: numSlots },
     { title: 'Workers', value: numWorkers },
-    { title: 'Possible Schedules', value: numPermutations },
+    { title: 'Possible Schedules', value: util.getLargeNumberDisplayForm(numPermutations) },
 ]
 
 // Basic generation controls, building off of what's found in the parameters
@@ -333,6 +333,8 @@ watchEffect(() => {
                                     :disabled="isGenerating"
                                     label="Maximum Attempts"
                                     :min="1"
+                                    :hint="parameters.permutationThreshold ? util.getLargeNumberDisplayForm(parameters.permutationThreshold) : ''"
+                                    persistent-hint
                                 />
                             </v-col>
                             <v-col cols="12" sm="6" md="4" class="py-0">

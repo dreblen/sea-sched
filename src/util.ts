@@ -14,6 +14,42 @@ export function getDateString(date?: Date) {
     return date.toISOString().split('T')[0] as string
 }
 
+export function getLargeNumberDisplayForm(value: number): string {
+    const summaryThresholds = [
+        { power: 3, append: 'K' },
+        { power: 6, append: 'M' },
+        { power: 9, append: 'B' },
+        { power: 12, append: 'T' },
+        { power: 15, append: '' },
+    ]
+
+    // Find the largest power increment that this value matches
+    let power = 0
+    for (const threshold of summaryThresholds) {
+        if (value >= Math.pow(10,threshold.power)) {
+            power = threshold.power
+        }
+    }
+
+    // Summarize the number into that power's format
+    const threshold = summaryThresholds.find((t) => t.power === power)
+    if (threshold === undefined) {
+        // If we didn't pass even the lowest threshold, we can use the
+        // number as is
+        return value.toString()
+    }
+
+    // The special case of the highest power gets treated with E notation
+    if (threshold.append === '') {
+        return value.toExponential(1)
+    }
+
+    // Normal scenario divides by the power value and adds the symbol
+    const divided = value / Math.pow(10,threshold.power)
+    const rounded = Math.round(divided * 10) / 10
+    return `${rounded}${threshold.append}`
+}
+
 export function getMonthsAndWeeksFromDateRange(dateStart: string, dateEnd: string) {
     const months = [] as { dateStart: string, dateEnd: string }[]
     const weeks = [] as { dateStart: string, dateEnd: string }[]
