@@ -81,6 +81,13 @@ const numShifts = eligibleEvents.reduce((acc, e) => acc + e.shifts.length,0)
 const numSlots = eligibleEvents.reduce((acc,e) => acc + e.shifts.reduce((acc, s) => acc + s.slots.length,0),0)
 const numWorkers = activeWorkers.length
 const numPermutations = Math.pow(numWorkers + 1, numSlots)
+const allStats = [
+    { title: 'Events', value: numEvents },
+    { title: 'Shifts', value: numShifts },
+    { title: 'Slots', value: numSlots },
+    { title: 'Workers', value: numWorkers },
+    { title: 'Possible Schedules', value: numPermutations },
+]
 
 // Basic generation controls, building off of what's found in the parameters
 const isComprehensiveAllowed = computed(() => parameters.permutationThreshold >= numPermutations)
@@ -290,77 +297,114 @@ watchEffect(() => {
     </v-row>
     <v-row>
         <v-col>
-            Events: {{ numEvents }}
-        </v-col>
-        <v-col>
-            Shifts: {{ numShifts }}
-        </v-col>
-        <v-col>
-            Slots: {{ numSlots }}
-        </v-col>
-        <v-col>
-            Workers: {{ numWorkers }}
-        </v-col>
-        <v-col>
-            Possible Permutations: {{ numPermutations }}
+            <v-card variant="outlined">
+                <v-card-title>
+                    Parameter Stats
+                </v-card-title>
+                <v-card-text>
+                    <v-container>
+                        <v-row>
+                            <v-col
+                                v-for="stat of allStats"
+                                class="flex-grow-0 flex-shrink-1 pa-1"
+                            >
+                                <v-chip>
+                                    {{ stat.title }}: {{ stat.value }}
+                                </v-chip>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </v-card-text>
+            </v-card>
         </v-col>
     </v-row>
     <v-row>
         <v-col>
-            <v-number-input
-                v-model="parameters.permutationThreshold"
-                :disabled="isGenerating"
-                label="Maximum Generation Attempts"
-                :min="1"
-            />
-        </v-col>
-        <v-col>
-            <v-switch
-                v-model="parameters.isStopShort"
-                :disabled="isGenerating || parameters.isComprehensive"
-                color="primary"
-                hint="If yes, stop generating schedules after reaching the target amount at the target grade, even if not the highest possible grade"
-                persistent-hint
-            >
-                <template #label>
-                    Stop Short: {{ parameters.isStopShort ? 'Yes' : 'No' }}
-                </template>
-            </v-switch>
-        </v-col>
-        <v-col>
-            <v-switch
-                v-model="parameters.isComprehensive"
-                :disabled="isGenerating || !isComprehensiveAllowed"
-                color="primary"
-                hint="Comprehensive generation method only possible when max generation attempts >= total possible permutations"
-                persistent-hint
-            >
-                <template #label>
-                    <template v-if="parameters.isComprehensive">
-                        Comprehensive
-                    </template>
-                    <template v-else>
-                        Best Effort
-                    </template>
-                </template>
-            </v-switch>
-        </v-col>
-        <v-col>
-            <v-number-input
-                v-model="parameters.overallGradeThreshold"
-                :disabled="isGenerating"
-                label="Minimum Schedule Grade"
-                :min="0"
-                :max="100"
-            />
-        </v-col>
-        <v-col>
-            <v-number-input
-                v-model="parameters.resultThreshold"
-                :disabled="isGenerating"
-                label="Maximum Schedules"
-                :min="1"
-            />
+            <v-card variant="outlined">
+                <v-card-title>
+                    Generation Controls
+                </v-card-title>
+                <v-card-text>
+                    <v-container>
+                        <v-row>
+                            <v-col cols="12" sm="6" md="4" class="py-0">
+                                <v-number-input
+                                    v-model="parameters.permutationThreshold"
+                                    :disabled="isGenerating"
+                                    label="Maximum Attempts"
+                                    :min="1"
+                                />
+                            </v-col>
+                            <v-col cols="12" sm="6" md="4" class="py-0">
+                                <v-number-input
+                                    v-model="parameters.overallGradeThreshold"
+                                    :disabled="isGenerating"
+                                    label="Minimum Grade"
+                                    :min="0"
+                                    :max="100"
+                                />
+                            </v-col>
+                            <v-col cols="12" sm="6" md="4" class="py-0">
+                                <v-number-input
+                                    v-model="parameters.resultThreshold"
+                                    :disabled="isGenerating"
+                                    label="Maximum Schedules"
+                                    :min="1"
+                                />
+                            </v-col>
+                            <v-col cols="12" class="pb-2">
+                                <v-row>
+                                    <v-col class="pb-0">
+                                        Stop generating schedules after reaching the
+                                        target amount at the target grade, even if not
+                                        the highest possible grade?
+                                    </v-col>
+                                    <v-col cols="12" sm="3" class="pt-0">
+                                        <v-switch
+                                            v-model="parameters.isStopShort"
+                                            :disabled="isGenerating || parameters.isComprehensive"
+                                            color="primary"
+                                            hide-details
+                                        >
+                                            <template #label>
+                                                {{ parameters.isStopShort ? 'Yes' : 'No' }}
+                                            </template>
+                                        </v-switch>
+                                    </v-col>
+                                </v-row>
+                            </v-col>
+                            <v-col cols="12">
+                                <v-row>
+                                    <v-col class="pb-0">
+                                        Which method of schedule generation should be
+                                        used? Comprehensive tests every possible worker
+                                        in every possible slot, but this is possible
+                                        only when the max attempts is at least as high
+                                        as the number of possible schedules.
+                                    </v-col>
+                                    <v-col cols="12" sm="3" class="pt-0">
+                                        <v-switch
+                                            v-model="parameters.isComprehensive"
+                                            :disabled="isGenerating || !isComprehensiveAllowed"
+                                            color="primary"
+                                            hide-details
+                                        >
+                                            <template #label>
+                                                <template v-if="parameters.isComprehensive">
+                                                    Comprehensive
+                                                </template>
+                                                <template v-else>
+                                                    Best Effort
+                                                </template>
+                                            </template>
+                                        </v-switch>
+                                    </v-col>
+                                </v-row>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </v-card-text>
+            </v-card>
         </v-col>
     </v-row>
     <v-row v-if="parameters.baseSchedule">
