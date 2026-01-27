@@ -684,6 +684,55 @@ function copyScheduleWeeklyTableToClipboard(schedule: Schedule) {
     })
     navigator.clipboard.write([item])
 }
+
+function copyScheduleTabDelimitedToClipboard(schedule: Schedule) {
+    // Determine all the shift+slot name combinations we'll be looking for to
+    // make headings and alignments
+    const headings = [] as string[]
+    for (const event of schedule.events) {
+        for (const shift of event.shifts) {
+            for (const slot of shift.slots) {
+                const heading = `${shift.name}: ${slot.name}`
+                if (!headings.includes(heading)) {
+                    headings.push(heading)
+                }
+            }
+        }
+    }
+
+    // Build our rows in alignment with the established headings
+    const rows = [] as string[]
+    for (const event of schedule.events) {
+        let rowElements = [event.name]
+
+        for (const heading of headings) {
+            let hasMatch = false
+            for (const shift of event.shifts) {
+                for (const slot of shift.slots) {
+                    const combinedName = `${shift.name}: ${slot.name}`
+                    if (heading === combinedName) {
+                        hasMatch = true
+                        rowElements.push(setup.workers.find((w) => w.id === slot.workerId)?.name || 'N/A')
+                    }
+                }
+            }
+
+            if (!hasMatch) {
+                rowElements.push('')
+            }
+        }
+
+        rows.push(rowElements.join("\t"))
+    }
+
+    // Add a non-shift+slot heading now that it won't skew our construction
+    headings.unshift('Event')
+
+    // Build the final results and place them on the clipboard
+    let tsv = headings.join("\t") + "\n"
+    tsv += rows.join("\n")
+    navigator.clipboard.writeText(tsv)
+}
 </script>
 
 <template>
@@ -1000,6 +1049,24 @@ function copyScheduleWeeklyTableToClipboard(schedule: Schedule) {
                                         <td>
                                             <v-btn
                                                 @click="copyScheduleWeeklyTableToClipboard(schedule as Schedule)"
+                                                append-icon="mdi-content-copy"
+                                            >
+                                                Copy to Clipboard
+                                            </v-btn>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <em>Tab-Delimited:</em> Use this
+                                            method to store a simple layout of
+                                            the schedule by event with shift and
+                                            slot data aligned with tabs. This
+                                            may be a good starting point for a
+                                            schedule published via spreadsheet.
+                                        </td>
+                                        <td>
+                                            <v-btn
+                                                @click="copyScheduleTabDelimitedToClipboard(schedule as Schedule)"
                                                 append-icon="mdi-content-copy"
                                             >
                                                 Copy to Clipboard
