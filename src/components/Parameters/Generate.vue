@@ -285,6 +285,7 @@ watchEffect(() => {
         <v-col>
             <v-number-input
                 v-model="parameters.permutationThreshold"
+                :disabled="isGenerating"
                 label="Maximum Generation Attempts"
                 :min="1"
             />
@@ -292,7 +293,7 @@ watchEffect(() => {
         <v-col>
             <v-switch
                 v-model="parameters.isStopShort"
-                :disabled="parameters.isComprehensive"
+                :disabled="isGenerating || parameters.isComprehensive"
                 color="primary"
                 hint="If yes, stop generating schedules after reaching the target amount at the target grade, even if not the highest possible grade"
                 persistent-hint
@@ -305,7 +306,7 @@ watchEffect(() => {
         <v-col>
             <v-switch
                 v-model="parameters.isComprehensive"
-                :disabled="!isComprehensiveAllowed"
+                :disabled="isGenerating || !isComprehensiveAllowed"
                 color="primary"
                 hint="Comprehensive generation method only possible when max generation attempts >= total possible permutations"
                 persistent-hint
@@ -323,6 +324,7 @@ watchEffect(() => {
         <v-col>
             <v-number-input
                 v-model="parameters.overallGradeThreshold"
+                :disabled="isGenerating"
                 label="Minimum Schedule Grade"
                 :min="0"
                 :max="100"
@@ -331,6 +333,7 @@ watchEffect(() => {
         <v-col>
             <v-number-input
                 v-model="parameters.resultThreshold"
+                :disabled="isGenerating"
                 label="Maximum Schedules"
                 :min="1"
             />
@@ -341,7 +344,7 @@ watchEffect(() => {
             <v-checkbox
                 v-model="parameters.useBaseSchedule"
                 label="Use stored steps from the Results tab as a starting point for all schedules?"
-                :disabled="hasScopeHashChanged"
+                :disabled="isGenerating || hasScopeHashChanged"
                 color="primary"
                 hide-details
             />
