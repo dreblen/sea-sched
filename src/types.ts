@@ -174,7 +174,8 @@ export enum GradeComponentType {
     BalanceCount = 201,
     BalanceSpacing = 202,
     BalanceDistribution = 203,
-    Variety = 301,
+    VarietyAssignments = 301,
+    VarietyCoworkers = 302,
     TagAffinity = 401,
 }
 

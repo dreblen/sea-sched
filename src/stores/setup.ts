@@ -491,15 +491,20 @@ export const useSetupStore = defineStore('setup', () => {
         })
     
         gradeComponents.value.push({
-            id: GradeComponentType.Variety,
-            name: 'Variety',
+            id: GradeComponentType.VarietyAssignments,
+            name: 'Variety: Assignments',
+            weight: 2.5,
+        })
+        gradeComponents.value.push({
+            id: GradeComponentType.VarietyCoworkers,
+            name: 'Variety: Coworkers',
             weight: 2.5,
         })
     
         gradeComponents.value.push({
             id: GradeComponentType.TagAffinity,
             name: 'General Slot Affinity',
-            weight: 20,
+            weight: 17.5,
         })
     }
 

@@ -889,8 +889,8 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
     }
 
     ////////////////////////////////////////////////////////////////////////////
-    // Variety: Frequency of assignment to different shifts and slots. The value
-    // here is similar in calculation to the Balance component.
+    // Variety of assignments: Frequency of assignment to different shifts and
+    // slots. The value here is similar in calculation to the Balance component.
     ////////////////////////////////////////////////////////////////////////////
     {
         // - Store baseline data on how many unique shifts and slots are
@@ -944,8 +944,92 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
             slotPortion = 0.0
         }
         grade.components.push({
-            componentId: GradeComponentType.Variety,
+            componentId: GradeComponentType.VarietyAssignments,
             value: 100.0 * (shiftPortion + slotPortion) / 2
+        })
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Variety of coworkers: Frequency of assignments with different workers.
+    // Higher grades come when not always scheduled with the same person.
+    ////////////////////////////////////////////////////////////////////////////
+    {
+        // - Make a cross join between all the workers that appear in the
+        // schedule with an indicator for whether or not the combination appears
+        let numUniqueWorkerPairs = 0
+        const workerPairFlags = {} as {
+            [workerId1: number]: {
+                [workerId2: number]: boolean
+            }
+        }
+        const scheduleWorkerIds = [...new Set(gss.map((gs) => gs.slot.workerId).filter((id) => id !== undefined && id !== 0) as number[])]
+        for (const id1 of scheduleWorkerIds) {
+            const comparisonWorkerIds = scheduleWorkerIds.filter((id) => id < id1)
+            for (const id2 of comparisonWorkerIds) {
+                if (workerPairFlags[id1] === undefined) {
+                    workerPairFlags[id1] = {}
+                }
+                if (workerPairFlags[id1][id2] === undefined) {
+                    workerPairFlags[id1][id2] = false
+                    numUniqueWorkerPairs++
+                }
+            }
+        }
+
+        // - Iterate the schedule assignments to test each eligible combination
+        for (const gs of gss) {
+            // Skip non-assignments
+            if (gs.slot.workerId === undefined || gs.slot.workerId === 0) {
+                continue
+            }
+
+            // Iterate neighboring slots
+            for (const slot of gs.shift.slots) {
+                // Skip our base slot
+                if (slot.id === gs.slot.id) {
+                    continue
+                }
+
+                // Skip non-assignments
+                if (slot.workerId === undefined || slot.workerId === 0) {
+                    continue
+                }
+
+                // Mark this combination as having occurred
+                const baseList = workerPairFlags[gs.slot.workerId]
+                if (baseList !== undefined) {
+                    if (baseList[slot.workerId] !== undefined) {
+                        baseList[slot.workerId] = true
+                    }
+                }
+            }
+        }
+
+        // - Count the number of unique pairs that occurred
+        let numOccurredPairs = 0
+        for (const id1 of Object.keys(workerPairFlags)) {
+            const set = workerPairFlags[parseInt(id1)]
+            if (set === undefined) {
+                continue
+            }
+
+            for (const id2 of Object.keys(set)) {
+                const flag = set[parseInt(id2)]
+                if (flag === true) {
+                    numOccurredPairs++
+                }
+            }
+        }
+
+        // - Finalize our grade
+        let finalGrade = numOccurredPairs / numUniqueWorkerPairs
+        if (isNaN(finalGrade)) {
+            finalGrade = 0
+        }
+
+        grade.components.push({
+            componentId: GradeComponentType.VarietyCoworkers,
+            value: 100.0 * finalGrade
         })
     }
 
