@@ -18,7 +18,7 @@ const isImportJsonValid = computed(() => {
     }
 
     try {
-        JSON.parse(importJson.value)
+        JSON.parse(importJson.value.substring(32))
         return true
     } catch (e) {
         return false
@@ -26,7 +26,8 @@ const isImportJsonValid = computed(() => {
 })
 
 function processJsonImport() {
-    const schedule = util.deserializeSchedule(importJson.value)
+    const scopeHash = importJson.value.substring(0,32)
+    const schedule = util.deserializeSchedule(importJson.value.substring(32))
 
     // Back up the current scope settings since we're about to replace them
     // temporarily for the sake of the import
@@ -44,7 +45,7 @@ function processJsonImport() {
 
     // Reset our results parameters so they have the best chance of rendering
     // the imported schedule correctly
-    results.scopeHash = ''
+    results.scopeHash = scopeHash
     results.clearSchedules()
     results.setScopeSegments(parameters.scope.weeks, parameters.scope.months)
     results.setGradeComponents(setup.gradeComponents)

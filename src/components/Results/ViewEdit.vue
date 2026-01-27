@@ -478,7 +478,10 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
 }
 
 function copyScheduleExportToClipboard(schedule: Schedule) {
-    navigator.clipboard.writeText(util.serializeSchedule(schedule))
+    // We include the current scope hash along with the serialized schedule so
+    // that it's possible to use step data again after importing
+    const serialized = util.serializeSchedule(schedule)
+    navigator.clipboard.writeText(results.scopeHash + serialized)
 }
 
 function copyScheduleWeeklyTableToClipboard(schedule: Schedule) {
