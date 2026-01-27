@@ -180,6 +180,12 @@ async function generate() {
                 return 0
             })
 
+            // Trim our results down if running multiple threads put us over our
+            // target amount
+            if (results.schedules.length > parameters.resultThreshold) {
+                results.schedules.splice(parameters.resultThreshold)
+            }
+
             isGenerating.value = false
         }
 
