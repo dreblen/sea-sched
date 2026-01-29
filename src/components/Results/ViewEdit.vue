@@ -737,11 +737,12 @@ function copyScheduleTabDelimitedToClipboard(schedule: Schedule) {
     navigator.clipboard.writeText(tsv)
 }
 
-async function copyDisplayScheduleToClipboard(schedule: Schedule) {
+function copyDisplayScheduleToClipboard(schedule: Schedule) {
     const display = util.getDisplayScheduleFromSchedule(schedule, setup.workers)
     const minified = util.getMinifiedDisplayScheduleFromDisplaySchedule(display)
     const base64 = btoa(JSON.stringify(minified))
-    navigator.clipboard.writeText(base64)
+    const url = `${window.location.origin}/view/${base64}`
+    navigator.clipboard.writeText(url)
 }
 </script>
 
