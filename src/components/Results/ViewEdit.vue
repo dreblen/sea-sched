@@ -736,6 +736,13 @@ function copyScheduleTabDelimitedToClipboard(schedule: Schedule) {
     tsv += rows.join("\n")
     navigator.clipboard.writeText(tsv)
 }
+
+async function copyDisplayScheduleToClipboard(schedule: Schedule) {
+    const display = util.getDisplayScheduleFromSchedule(schedule, setup.workers)
+    const minified = util.getMinifiedDisplayScheduleFromDisplaySchedule(display)
+    const base64 = btoa(JSON.stringify(minified))
+    navigator.clipboard.writeText(base64)
+}
 </script>
 
 <template>
@@ -1070,6 +1077,23 @@ function copyScheduleTabDelimitedToClipboard(schedule: Schedule) {
                                         <td>
                                             <v-btn
                                                 @click="copyScheduleTabDelimitedToClipboard(schedule as Schedule)"
+                                                append-icon="mdi-content-copy"
+                                            >
+                                                Copy to Clipboard
+                                            </v-btn>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <em>App Publishing:</em> Use this
+                                            method to generate a sharing key
+                                            that can be used to view the
+                                            schedule within this app without
+                                            editing capabilities.
+                                        </td>
+                                        <td>
+                                            <v-btn
+                                                @click="copyDisplayScheduleToClipboard(schedule as Schedule)"
                                                 append-icon="mdi-content-copy"
                                             >
                                                 Copy to Clipboard

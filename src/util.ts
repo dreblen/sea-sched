@@ -1195,3 +1195,148 @@ export function getBase10toBaseX(original: number, base: number, arrayPadding?: 
 
     return results
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Helpers for schedule display
+////////////////////////////////////////////////////////////////////////////////
+
+import type { DisplaySchedule, DisplayScheduleSlotGroup, DisplayScheduleShift, DisplayScheduleEvent } from '@/types'
+import type { MinifiedDisplaySchedule, MinifiedDisplayScheduleSlotGroup, MinifiedDisplayScheduleShift, MinifiedDisplayScheduleEvent } from '@/types'
+
+export function getDisplayScheduleFromSchedule(schedule: Schedule, workers: Worker[]) {
+    const ds: DisplaySchedule = {
+        events: []
+    }
+
+    for (const event of schedule.events) {
+        const newEvent: DisplayScheduleEvent = {
+            name: event.name,
+            calendarDate: event.calendarDate,
+            shifts: [],
+        }
+
+        for (const shift of event.shifts) {
+            const newShift: DisplayScheduleShift = {
+                name: shift.name,
+                slotGroups: [],
+            }
+
+            const uniqueGroupIds = [...new Set(shift.slots.map((l) => l.groupId))].sort()
+            for (const groupId of uniqueGroupIds) {
+                const newGroup: DisplayScheduleSlotGroup = {
+                    slots: []
+                }
+
+                const slots = shift.slots.filter((l) => l.groupId === groupId)
+                for (const slot of slots) {
+                    newGroup.slots.push({
+                        name: slot.name,
+                        workerName: workers.find((w) => w.id === slot.workerId)?.name || 'N/A',
+                    })
+                }
+
+                newShift.slotGroups.push(newGroup)
+            }
+
+            newEvent.shifts.push(newShift)
+        }
+
+        ds.events.push(newEvent)
+    }
+
+    return ds
+}
+
+export function getMinifiedDisplayScheduleFromDisplaySchedule(schedule: DisplaySchedule) {
+    const minified: MinifiedDisplaySchedule = {
+        e: [],
+        s: []
+    }
+
+    const getOrAddStringIndex = function(value: string) {
+        const i = minified.s.findIndex((v) => v === value)
+        if (i !== -1) {
+            return i
+        } else {
+            return minified.s.push(value) - 1
+        }
+    }
+
+    for (const event of schedule.events) {
+        const newEvent: MinifiedDisplayScheduleEvent = {
+            n: getOrAddStringIndex(event.name),
+            d: getOrAddStringIndex(event.calendarDate),
+            s: [],
+        }
+
+        for (const shift of event.shifts) {
+            const newShift: MinifiedDisplayScheduleShift = {
+                n: getOrAddStringIndex(shift.name),
+                g: [],
+            }
+
+            for (const group of shift.slotGroups) {
+                const newGroup: MinifiedDisplayScheduleSlotGroup = {
+                    s: [],
+                }
+
+                for (const slot of group.slots) {
+                    newGroup.s.push({
+                        n: getOrAddStringIndex(slot.name),
+                        w: getOrAddStringIndex(slot.workerName),
+                    })
+                }
+
+                newShift.g.push(newGroup)
+            }
+
+            newEvent.s.push(newShift)
+        }
+
+        minified.e.push(newEvent)
+    }
+
+    return minified
+}
+
+export function getDisplayScheduleFromMinifiedDisplaySchedule(minified: MinifiedDisplaySchedule) {
+    const schedule: DisplaySchedule = {
+        events: []
+    }
+
+    for (const event of minified.e) {
+        const newEvent: DisplayScheduleEvent = {
+            name: minified.s[event.n] || '',
+            calendarDate: minified.s[event.d] || '',
+            shifts: [],
+        }
+
+        for (const shift of event.s) {
+            const newShift: DisplayScheduleShift = {
+                name: minified.s[shift.n] || '',
+                slotGroups: []
+            }
+
+            for (const group of shift.g) {
+                const newGroup: DisplayScheduleSlotGroup = {
+                    slots: [],
+                }
+
+                for (const slot of group.s) {
+                    newGroup.slots.push({
+                        name: minified.s[slot.n] || '',
+                        workerName: minified.s[slot.w] || '',
+                    })
+                }
+
+                newShift.slotGroups.push(newGroup)
+            }
+
+            newEvent.shifts.push(newShift)
+        }
+
+        schedule.events.push(newEvent)
+    }
+
+    return schedule
+}

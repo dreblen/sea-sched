@@ -9,7 +9,7 @@ const tabs = [
 
 <template>
     <v-app>
-        <v-tabs align-tabs="center" bg-color="primary">
+        <v-tabs v-if="!$route.path.startsWith('/view')" align-tabs="center" bg-color="primary">
             <v-tab v-for="tab in tabs" :key="tab.name" :to="tab.to">
                 {{ tab.name }}
             </v-tab>

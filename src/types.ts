@@ -203,6 +203,69 @@ export interface Schedule extends Common {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Schedule Objects for Distribution
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
+// Basic objects for use in rendering/manipulation
+////////////////////////////////////////////////////////////
+
+export interface DisplayScheduleSlot {
+    name: string
+    workerName: string
+}
+
+export interface DisplayScheduleSlotGroup {
+    slots: DisplayScheduleSlot[]
+}
+
+export interface DisplayScheduleShift {
+    name: string
+    slotGroups: DisplayScheduleSlotGroup[]
+}
+
+export interface DisplayScheduleEvent {
+    name: string
+    calendarDate: string
+    shifts: DisplayScheduleShift[]
+}
+
+export interface DisplaySchedule {
+    events: DisplayScheduleEvent[]
+}
+
+////////////////////////////////////////////////////////////
+// Same structure as basic objects, but with shorter
+// attribute names and support for compression via string
+// lookups at the root level
+////////////////////////////////////////////////////////////
+
+export interface MinifiedDisplayScheduleSlot {
+    n: number // name
+    w: number // workerName
+}
+
+export interface MinifiedDisplayScheduleSlotGroup {
+    s: MinifiedDisplayScheduleSlot[] // slots
+}
+
+export interface MinifiedDisplayScheduleShift {
+    n: number // name
+    g: MinifiedDisplayScheduleSlotGroup[] // slotGroups
+}
+
+export interface MinifiedDisplayScheduleEvent {
+    n: number // name
+    d: number // calendarDate
+    s: MinifiedDisplayScheduleShift[] // shifts
+}
+
+export interface MinifiedDisplaySchedule {
+    e: MinifiedDisplayScheduleEvent[] // events
+    s: string[] // strings (compression lookup)
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // General Helpers
 ////////////////////////////////////////////////////////////////////////////////
 
