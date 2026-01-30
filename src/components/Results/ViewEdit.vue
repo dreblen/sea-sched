@@ -110,25 +110,7 @@ function onCurrentScheduleChange(id?: number) {
                     continue
                 }
 
-                for (const i in slot.affinityNotes) {
-                    const currentNote = slot.affinityNotes[i] as string
-
-                    // Test if this is a tag affinity note
-                    const parts = currentNote.split('|')
-                    if (parts.length !== 2) {
-                        continue
-                    }
-                    const id1 = parseInt(parts[0] as string)
-                    const id2 = parseInt(parts[1] as string)
-                    if (isNaN(id1) || isNaN(id2)) {
-                        continue
-                    }
-
-                    // Look up the tag names and build a new note
-                    const tag1 = results.tags.find((t) => t.id === id1)
-                    const tag2 = results.tags.find((t) => t.id === id2)
-                    slot.affinityNotes[i] = `"${tag1?.name}" / "${tag2?.name}"`
-                }
+                slot.affinityNotes = util.getConvertedAffinityNotes(slot.affinityNotes, results.tags)
             }
         }
     }
@@ -344,6 +326,15 @@ function onWorkerNameClick(schedule: Schedule, slot: ScheduleSlot) {
     // Fill in final names now that we've handled worker lookups
     for (const e of eligible) {
         e.title = e.worker?.name || 'N/A'
+    }
+
+    // Fill in tag-based affinity notes
+    for (const ew of eligible) {
+        if (ew.affinityNotes === undefined) {
+            continue
+        } else {
+            ew.affinityNotes = util.getConvertedAffinityNotes(ew.affinityNotes, results.tags)
+        }
     }
 
     // Store our results so they can be used in the app

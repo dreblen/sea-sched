@@ -1203,6 +1203,32 @@ export function getBase10toBaseX(original: number, base: number, arrayPadding?: 
 import type { DisplaySchedule, DisplayScheduleSlotGroup, DisplayScheduleShift, DisplayScheduleEvent } from '@/types'
 import type { MinifiedDisplaySchedule, MinifiedDisplayScheduleSlotGroup, MinifiedDisplayScheduleShift, MinifiedDisplayScheduleEvent } from '@/types'
 
+export function getConvertedAffinityNotes(notes: string[], tags: Tag[]) {
+    const workingCopy = notes.slice()
+
+    for (const i in workingCopy) {
+        const currentNote = workingCopy[i] as string
+
+        // Test if this is a tag affinity note
+        const parts = currentNote.split('|')
+        if (parts.length !== 2) {
+            continue
+        }
+        const id1 = parseInt(parts[0] as string)
+        const id2 = parseInt(parts[1] as string)
+        if (isNaN(id1) || isNaN(id2)) {
+            continue
+        }
+
+        // Look up the tag names and build a new note
+        const tag1 = tags.find((t) => t.id === id1)
+        const tag2 = tags.find((t) => t.id === id2)
+        workingCopy[i] = `"${tag1?.name}" / "${tag2?.name}"`
+    }
+
+    return workingCopy
+}
+
 export function getDisplayScheduleFromSchedule(schedule: Schedule, workers: Worker[]) {
     const ds: DisplaySchedule = {
         events: []
