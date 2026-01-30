@@ -78,6 +78,12 @@ const tagLogicOptions = [
                     >
                     </v-switch>
                 </v-col>
+                <v-col cols="12">
+                    <v-textarea
+                        v-model="(worker.item as Worker).notes"
+                        label="Notes"
+                    />
+                </v-col>
             </v-row>
             <v-row>
                 <v-col cols="12">

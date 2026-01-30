@@ -56,6 +56,7 @@ export interface Worker extends Tagged {
     monthLimit: number
     monthLimitRequired: boolean
     unavailableDates: AvailabilityDate[]
+    notes: string
 }
 
 export interface Slot extends Tagged {

@@ -121,7 +121,8 @@ export const useSetupStore = defineStore('setup', () => {
             weekLimitRequired: false,
             monthLimit: 0,
             monthLimitRequired: false,
-            unavailableDates: []
+            unavailableDates: [],
+            notes: ''
         })
     }
 
