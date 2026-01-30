@@ -412,7 +412,24 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
         ////////////////////////////////////////////////////////////////////////
         let limitAffinity = AssignmentAffinity.Neutral
         let limitNotes = [] as string[]
-        if (worker.weekLimit > 0 || worker.monthLimit > 0) {
+        if (worker.eventLimit > 0 || worker.weekLimit > 0 || worker.monthLimit > 0) {
+            // Check if we have reached our event limit
+            if (worker.eventLimit > 0) {
+                const numAssignments = gs.event.shifts
+                    .filter((s) => s.slots.filter((l) => l.workerId === worker.id).length > 0)
+                    .length
+                if (numAssignments >= worker.eventLimit) {
+                    const note = `Event Limit (${worker.eventLimit})`
+                    if (worker.eventLimitRequired) {
+                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed, notes: [note] })
+                        continue
+                    } else {
+                        limitAffinity = AssignmentAffinity.Unwanted
+                        limitNotes.push(note)
+                    }
+                }
+            }
+
             // Check if we have reached our week limit
             if (worker.weekLimit > 0 && thisWeek !== undefined) {
                 const numAssignments = schedule.events

@@ -91,6 +91,23 @@ const tagLogicOptions = [
                 </v-col>
                 <v-col cols="12" sm="8" md="6" lg="4">
                     <v-number-input
+                        v-model="(worker.item as Worker).eventLimit"
+                        label="Per Event"
+                        hint="0 = No Limit"
+                        :min="0"
+                    >
+                        <template #append>
+                            <v-switch
+                                v-model="(worker.item as Worker).eventLimitRequired"
+                                :label="(worker.item as Worker).eventLimitRequired ? 'Required' : 'Optional'"
+                                color="primary"
+                                hide-details
+                            />
+                        </template>
+                    </v-number-input>
+                </v-col>
+                <v-col cols="12" sm="8" md="6" lg="4">
+                    <v-number-input
                         v-model="(worker.item as Worker).weekLimit"
                         label="Per Week"
                         hint="0 = No Limit"

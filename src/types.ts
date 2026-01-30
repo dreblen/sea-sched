@@ -51,6 +51,8 @@ export interface AvailabilityDate extends Tagged {
 
 export interface Worker extends Tagged {
     isActive: boolean
+    eventLimit: number
+    eventLimitRequired: boolean
     weekLimit: number
     weekLimitRequired: boolean
     monthLimit: number
