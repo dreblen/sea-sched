@@ -58,7 +58,11 @@ function getAssignmentAffinityProps(workerId?: number, value?: AssignmentAffinit
         case AssignmentAffinityType.Positive:
             return ['success','mdi-check-circle']
         case AssignmentAffinityType.Negative:
-            return ['warning','mdi-alert']
+            if (value === AssignmentAffinity.Disallowed) {
+                return ['error','mdi-alert-octagon']
+            } else {
+                return ['warning','mdi-alert']
+            }
         default:
             return []
     }
@@ -265,7 +269,7 @@ function onWorkerNameClick(schedule: Schedule, slot: ScheduleSlot) {
                     // the current assignment details since they will be
                     // excluded from the usual consideration unless it is an
                     // intentional non-assignment.
-                    eligible = util.getEligibleWorkersForSlot(gs, schedule, setup.workers, setup.affinitiesByTagTag)
+                    eligible = util.getEligibleWorkersForSlot(gs, schedule, setup.workers, setup.affinitiesByTagTag, true)
                     if (slot.workerId !== undefined && slot.workerId !== 0) {
                         eligible.push({
                             workerId: slot.workerId,

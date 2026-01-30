@@ -320,7 +320,7 @@ export function getAssignmentAffinityType(value?: AssignmentAffinity) {
 // Determine a prioritized list of workers who are able to fill a specified
 // slot, along with an indicator of what affinity the workers in that list will
 // have with the slot
-export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule, workers: Worker[], affinitiesByTagTag: TagAffinityMapMap): EligibleWorker[] {
+export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule, workers: Worker[], affinitiesByTagTag: TagAffinityMapMap, returnAll?: boolean): EligibleWorker[] {
     // Gather context data about slots that are in the same shift as the one
     // being considered for assignment
     const siblingSlots = gs.shift.slots.filter((l) => l.groupId === gs.slot.groupId && l.id !== gs.slot.id)
@@ -353,6 +353,7 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
         // Check the worker's unavailability
         ////////////////////////////////////////////////////////////////////////
         let isUnavailable = false
+        let unavailableNotes = ''
         for (const unavailableDate of worker.unavailableDates) {
             // If we have an answer already, don't proceed
             if (isUnavailable) {
@@ -368,6 +369,7 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
             // to check
             if (unavailableDate.tags.length === 0) {
                 isUnavailable = true
+                unavailableNotes = unavailableDate.notes
                 break
             }
 
@@ -380,6 +382,7 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
                 // after the first positive check
                 if (unavailableDate.tagLogic === 'any' && tagMatch) {
                     isUnavailable = true
+                    unavailableNotes = unavailableDate.notes
                     break
                 }
 
@@ -395,11 +398,12 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
             // Finish out the "all" tag logic
             if (unavailableDate.tagLogic === 'all' && allMatched) {
                 isUnavailable = true
+                unavailableNotes = unavailableDate.notes
                 break
             }
         }
         if (isUnavailable) {
-            workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed })
+            workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed, notes: [unavailableNotes || 'Unavailable'] })
             continue
         }
 
@@ -416,12 +420,13 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
                     .reduce((t,e) => t + e.shifts.reduce((t,s) => t + s.slots.filter((l) => l.workerId === worker.id).length,0),0)
                 
                 if (numAssignments >= worker.weekLimit) {
+                    const note = `Week Limit (${worker.weekLimit})`
                     if (worker.weekLimitRequired) {
-                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed })
+                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed, notes: [note] })
                         continue
                     } else {
                         limitAffinity = AssignmentAffinity.Unwanted
-                        limitNotes.push(`Week Limit (${worker.weekLimit})`)
+                        limitNotes.push(note)
                     }
                 }
             }
@@ -433,12 +438,13 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
                     .reduce((t,e) => t + e.shifts.reduce((t,s) => t + s.slots.filter((l) => l.workerId === worker.id).length,0),0)
                 
                 if (numAssignments >= worker.monthLimit) {
+                    const note = `Month Limit (${worker.monthLimit})`
                     if (worker.monthLimitRequired) {
-                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed })
+                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed, notes: [note] })
                         continue
                     } else {
                         limitAffinity = AssignmentAffinity.Unwanted
-                        limitNotes.push(`Month Limit (${worker.monthLimit})`)
+                        limitNotes.push(note)
                     }
                 }
             }
@@ -495,7 +501,7 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
                     // If there is a negative, required affinity, exclude the
                     // worker from consideration for this slot
                     else {
-                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed })
+                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed, notes })
                         isStopShort = true
                         break
                     }
@@ -528,8 +534,9 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
         workerAffinities.push({ workerId: 0, affinity: AssignmentAffinity.Neutral })
     }
 
-    // Don't consider any workers who had at least one "disallowed" affinity,
-    // and if there are any workers with a required affinity, only consider them
+    // Unless we've been told to return all workers with their affinities, don't
+    // consider any workers who had at least one "disallowed" affinity, and if
+    // there are any workers with a required affinity, only consider them
     const disallowedWorkersIds = workerAffinities
         .filter((wa) => wa.affinity === AssignmentAffinity.Disallowed)
         .map((wa) => wa.workerId)
@@ -537,21 +544,33 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
         .filter((wa) => wa.affinity == AssignmentAffinity.Required)
         .map((wa) => wa.workerId)
 
-    const possibleWorkerIds = [...new Set(workerAffinities
-        .filter((wa) => !disallowedWorkersIds.includes(wa.workerId))
-        .filter((wa) => requiredWorkerIds.length > 0 ? requiredWorkerIds.includes(wa.workerId) : true)
-        .map((wa) => wa.workerId)
-    )]
+    let possibleWorkerIds = [] as number[]
+    if (returnAll !== true) {
+        possibleWorkerIds = [...new Set(workerAffinities
+            .filter((wa) => !disallowedWorkersIds.includes(wa.workerId))
+            .filter((wa) => requiredWorkerIds.length > 0 ? requiredWorkerIds.includes(wa.workerId) : true)
+            .map((wa) => wa.workerId)
+        )]
+    } else {
+        possibleWorkerIds = [...new Set(workerAffinities.map((wa) => wa.workerId))]
+    }
 
     // Determine a single affinity for each possible worker and add it to the
     // results that we return. We prefer positive or negative over neutral, but
     // negative over positive.
     const results = [] as EligibleWorker[]
     for (const workerId of possibleWorkerIds) {
-        // If we've filtered down to required affinities, we know that's what we
-        // can use right away; otherwise, filter as described above.
-        let affinity = AssignmentAffinity.Required
-        if (requiredWorkerIds.length === 0) {
+        // If this worker has a disallowed affinity, it wins over anything
+        let affinity = AssignmentAffinity.Neutral
+        if (disallowedWorkersIds.includes(workerId)) {
+            affinity = AssignmentAffinity.Disallowed
+        }
+        // If they have a required affinity, it comes next
+        else if (requiredWorkerIds.includes(workerId)) {
+            affinity = AssignmentAffinity.Required
+        }
+        // In all other cases, apply the general logic described above
+        else {
             affinity = workerAffinities
                 .filter((wa) => wa.workerId === workerId)
                 .reduce((p: AssignmentAffinity, wa) => {
