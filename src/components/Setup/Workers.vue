@@ -62,6 +62,7 @@ const tagLogicOptions = [
         @add="setup.addWorker"
         @remove="setup.removeWorker"
         include-filter
+        sorted
     >
         <template v-if="!worker.item">
             No worker currently selected.

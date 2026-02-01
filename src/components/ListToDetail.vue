@@ -13,6 +13,7 @@ const props = defineProps<{
     noActions?: boolean
     disableRemoveAction?: boolean
     includeFilter?: boolean
+    sorted?: boolean
 }>()
 
 const currentItemIds = ref<number[]>()
@@ -56,6 +57,31 @@ watchEffect(() => {
     }
 })
 
+// When we want the results to be sorted, we keep a separate list based on the
+// filtered list so we can mutate its order without affecting the original
+const sortedFilteredItems = computed(() => {
+    // If we aren't sorting, we can just use the filtered list directly
+    if (props.sorted !== true) {
+        return filteredItems.value
+    }
+
+    // Otherwise, make a copy of the list and sort it by the title field
+    const copy = filteredItems.value.slice().sort((a,b) => {
+        const aTitle: string = (a as any)[props.itemTitle || 'name']
+        const bTitle: string = (b as any)[props.itemTitle || 'name']
+
+        if (aTitle < bTitle) {
+            return -1
+        }
+        if (aTitle > bTitle) {
+            return 1
+        }
+        return 0
+    })
+
+    return copy
+})
+
 defineEmits({
     add() { return true },
     remove(id?: number) { return true },
@@ -94,7 +120,7 @@ defineEmits({
                         density="compact"
                         item-value="id"
                         :item-title="itemTitle || 'name'"
-                        :items="filteredItems"
+                        :items="sortedFilteredItems"
                         max-height="70vh"
                         @update:selected="$emit('change', currentItemId, currentItem ? ((currentItem as unknown) as { [propName: string]: string })[itemTitle || 'name'] : undefined)"
                     >
