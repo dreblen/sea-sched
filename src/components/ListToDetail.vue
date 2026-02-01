@@ -12,6 +12,7 @@ const props = defineProps<{
     itemTitle?: string
     noActions?: boolean
     disableRemoveAction?: boolean
+    includeFilter?: boolean
 }>()
 
 const currentItemIds = ref<number[]>()
@@ -30,6 +31,30 @@ const showConfirmationDialog = ref(false)
 
 // Vertical versions of the component remove space between list and detail
 const verticalPaddingClass = computed(() => props.vertical ? 'my-0' : null)
+
+// When we have a filter control, we need to track the filter text and the
+// resulting matches to become our new item list
+const filterText = ref('')
+const filteredItems = computed(() => {
+    // Without any filter text, we can just use the item list directly
+    if (filterText.value === '') {
+        return props.items
+    }
+
+    // Otherwise, filter based on matches to our title property
+    return props.items.filter((item) => {
+        const itemTitle: string = (item as any)[props.itemTitle || 'name']
+        return itemTitle.toLowerCase().includes(filterText.value.toLowerCase())
+    })
+})
+
+// If our selected item is no longer part of the filtered list, reset the
+// selection so we don't see the details for a filtered-out item
+watchEffect(() => {
+    if (filteredItems.value.find((item) => item.id === currentItemId.value) === undefined) {
+        currentItemIds.value = []
+    }
+})
 
 defineEmits({
     add() { return true },
@@ -53,15 +78,24 @@ defineEmits({
                             </v-col>
                         </v-row>
                     </v-card-actions>
+                    <v-card-actions v-if="props.includeFilter">
+                        <v-text-field
+                            v-model="filterText"
+                            label="Search"
+                            density="compact"
+                            clearable
+                            @click:clear="filterText = ''"
+                            hide-details
+                        />
+                    </v-card-actions>
                     <v-list
                         v-model:selected="currentItemIds"
                         mandatory
                         density="compact"
                         item-value="id"
                         :item-title="itemTitle || 'name'"
-                        :items="items"
+                        :items="filteredItems"
                         max-height="70vh"
-                        style="overflow-y: scroll"
                         @update:selected="$emit('change', currentItemId, currentItem ? ((currentItem as unknown) as { [propName: string]: string })[itemTitle || 'name'] : undefined)"
                     >
                         <template v-if="$slots.append" #append="{ item }">

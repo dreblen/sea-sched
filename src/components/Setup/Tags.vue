@@ -64,6 +64,7 @@ function onSelectedTagChange(id?: number) {
         @remove="setup.removeTag"
         @change="onSelectedTagChange"
         :disable-remove-action="isRemoveDisabled"
+        include-filter
     >
         <template v-if="!tag.item">
             No tag currently selected.

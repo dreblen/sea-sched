@@ -56,7 +56,13 @@ const tagLogicOptions = [
 </script>
 
 <template>
-    <list-to-detail :items="setup.workers" v-slot="worker" @add="setup.addWorker" @remove="setup.removeWorker">
+    <list-to-detail
+        :items="setup.workers"
+        v-slot="worker"
+        @add="setup.addWorker"
+        @remove="setup.removeWorker"
+        include-filter
+    >
         <template v-if="!worker.item">
             No worker currently selected.
         </template>
