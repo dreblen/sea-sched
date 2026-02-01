@@ -972,7 +972,7 @@ function copyDisplayScheduleToClipboard(schedule: Schedule) {
                                     v-model:selected="selectedScheduleSteps"
                                     select-strategy="independent"
                                     max-height="250px"
-                                    style="overflow-y: scroll"
+                                    style="overflow-y: auto"
                                 >
                                     <v-list-item
                                         v-for="step in (schedule as Schedule).steps"

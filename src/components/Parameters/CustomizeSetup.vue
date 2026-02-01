@@ -73,7 +73,7 @@ function onEventListChange(eventId?: number, eventName?: string) {
             </v-dialog>
         </v-col>
     </v-row>
-    <v-row style="max-height: 100%; overflow-y: scroll;">
+    <v-row style="max-height: 100%; overflow-y: auto;">
         <event-list-to-detail
             :items="parameters.scope.events"
             :store="parameters"

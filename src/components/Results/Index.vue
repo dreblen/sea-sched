@@ -18,7 +18,7 @@ const tabs = [
             {{ tab.name }}
         </v-tab>
     </v-tabs>
-    <v-tabs-window v-model="currentTab" style="overflow-y: scroll">
+    <v-tabs-window v-model="currentTab" style="overflow-y: auto">
         <v-tabs-window-item v-for="tab in tabs">
             <template v-if="tab.component">
                 <component :is="tab.component"></component>
