@@ -732,10 +732,25 @@ function copyScheduleTabDelimitedToClipboard(schedule: Schedule) {
     navigator.clipboard.writeText(tsv)
 }
 
-function copyDisplayScheduleToClipboard(schedule: Schedule) {
+function getDisplayScheduleSharingKey(schedule: Schedule) {
     const display = util.getDisplayScheduleFromSchedule(schedule, setup.workers)
     const minified = util.getMinifiedDisplayScheduleFromDisplaySchedule(display)
-    const base64 = btoa(JSON.stringify(minified))
+    return btoa(JSON.stringify(minified))
+}
+
+function copyDisplayScheduleSharingLinkToClipboard(schedule: Schedule) {
+    const base64 = getDisplayScheduleSharingKey(schedule)
+    const url = `${window.location.origin}/view/${base64}`
+    navigator.clipboard.writeText(url)
+}
+
+function copyDisplayScheduleSharingKeyToClipboard(schedule: Schedule) {
+    navigator.clipboard.writeText(getDisplayScheduleSharingKey(schedule))
+}
+
+const sharingKeyFileUrl = ref('')
+function copyDisplayScheduleSharingKeyFileSharingLinkToClipboard() {
+    const base64 = btoa(sharingKeyFileUrl.value)
     const url = `${window.location.origin}/view/${base64}`
     navigator.clipboard.writeText(url)
 }
@@ -1088,12 +1103,94 @@ function copyDisplayScheduleToClipboard(schedule: Schedule) {
                                             editing capabilities.
                                         </td>
                                         <td>
-                                            <v-btn
-                                                @click="copyDisplayScheduleToClipboard(schedule as Schedule)"
-                                                append-icon="mdi-content-copy"
-                                            >
-                                                Copy to Clipboard
-                                            </v-btn>
+                                            <v-container class="pl-0">
+                                                <v-row>
+                                                    <v-col class="pb-1">
+                                                        <v-btn
+                                                            @click="copyDisplayScheduleSharingLinkToClipboard(schedule as Schedule)"
+                                                            append-icon="mdi-content-copy"
+                                                        >
+                                                            Copy to Clipboard
+                                                        </v-btn>
+                                                    </v-col>
+                                                    <v-col class="py-1">
+                                                        <v-dialog max-width="500px">
+                                                            <template #activator="{ props }">
+                                                                <v-btn v-bind="props" @click="sharingKeyFileUrl = ''">
+                                                                    Create Live Link...
+                                                                </v-btn>
+                                                            </template>
+                                                            <template #default="{ isActive }">
+                                                                <v-card>
+                                                                    <v-card-text>
+                                                                        <v-container>
+                                                                            <v-row>
+                                                                                <v-col cols="12">
+                                                                                    To create a sharing link whose content updates
+                                                                                    automatically, follow these steps:
+                                                                                </v-col>
+                                                                                <v-col>
+                                                                                    <ol class="pl-5">
+                                                                                        <li class="mb-1">
+                                                                                            Copy the sharing key for the schedule
+                                                                                            and paste it into a new file:
+                                                                                            <v-btn
+                                                                                                @click="copyDisplayScheduleSharingKeyToClipboard(schedule as Schedule)"
+                                                                                                append-icon="mdi-content-copy"
+                                                                                            >
+                                                                                                Copy
+                                                                                            </v-btn>
+                                                                                        </li>
+                                                                                        <li class="mb-1">
+                                                                                            Upload this file to a web location
+                                                                                            that you can get a publicly accessible
+                                                                                            link to.
+                                                                                            <span class="text-caption">
+                                                                                                Note: With the following exceptions,
+                                                                                                this must be a link that prompts a download
+                                                                                                and not a "preview" type link from a file
+                                                                                                sharing service: Google Drive.
+                                                                                            </span>
+                                                                                        </li>
+                                                                                        <li class="mb-1">
+                                                                                            Paste that link here:
+                                                                                            <v-text-field
+                                                                                                v-model="sharingKeyFileUrl"
+                                                                                                label="Public File Link"
+                                                                                            />
+                                                                                        </li>
+                                                                                        <li class="mb-1">
+                                                                                            Generate a new sharing link based on your file link:
+                                                                                            <v-btn
+                                                                                                @click="copyDisplayScheduleSharingKeyFileSharingLinkToClipboard"
+                                                                                                append-icon="mdi-content-copy"
+                                                                                            >
+                                                                                                Copy
+                                                                                            </v-btn>
+                                                                                        </li>
+                                                                                        <li class="mb-1">
+                                                                                            Distribute this new link.
+                                                                                            <span class="text-caption">
+                                                                                                Note: In order for live updates to work properly,
+                                                                                                your original link must remain valid. If you update
+                                                                                                the schedule, you must update the contents of the
+                                                                                                original file and not make a new one.
+                                                                                            </span>
+                                                                                        </li>
+                                                                                    </ol>
+                                                                                </v-col>
+                                                                            </v-row>
+                                                                        </v-container>
+                                                                    </v-card-text>
+                                                                    <v-card-actions>
+                                                                        <v-btn @click="isActive.value = false">Close</v-btn>
+                                                                    </v-card-actions>
+                                                                </v-card>
+                                                            </template>
+                                                        </v-dialog>
+                                                    </v-col>
+                                                </v-row>
+                                            </v-container>
                                         </td>
                                     </tr>
                                 </tbody>

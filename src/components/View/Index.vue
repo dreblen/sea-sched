@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 
 import type { DisplaySchedule, DisplayScheduleEvent, MinifiedDisplaySchedule } from '@/types'
@@ -12,13 +12,80 @@ const sharingKeyManualEntry = ref('')
 
 const route = useRoute()
 
-const minified = computed(() => typeof route.params.base64 === 'string' ? atob(route.params.base64) : '')
-const display = computed(() => {
-    try {
-        const m: MinifiedDisplaySchedule = JSON.parse(minified.value)
-        return util.getDisplayScheduleFromMinifiedDisplaySchedule(m)
-    } catch (e) {
-        return {
+const sharingKeyInput = computed(() => typeof route.params.base64 === 'string' ? atob(route.params.base64) : '')
+
+// Determine whether we have a minified schedule directly or if we were given
+// a URL to access the schedule
+const isLoading = ref(false)
+const sharingKeyAsJson = computed(async () => {
+    // Treat the input as a URL if it begins with HTTP
+    const lower = sharingKeyInput.value.toLowerCase()
+    if (lower.startsWith('http')) {
+        isLoading.value = true
+        let url = sharingKeyInput.value
+
+        // If this is a link for a service we recognize, adjust it so we can
+        // download the file instead of loading a preview page
+        // - Google Drive
+        if (lower.includes('://drive.google.com')) {
+            // We only need to convert if this is a viewing link and not a
+            // downloading link
+            if (lower.includes('/view') && !lower.includes('export=download')) {
+                const patternMatches = url.match(/file\/d\/([^/]+)/)
+                if (patternMatches && patternMatches.length > 1) {
+                    const fileId = patternMatches[1]
+                    url = `https://drive.google.com/uc?export=download&id=${fileId}`
+                }
+            }
+        }
+
+        // Try to download the file outright
+        try {
+            const res = await fetch(url)
+            const base64 = await res.text()
+            const text = atob(base64)
+            const json: Object = JSON.parse(text)
+            return json
+        } catch (e) {
+            // Before giving up completely, try downloading via a CORS proxy
+            // https://github.com/reynaldichernando/Whatever-Origin
+            url = `https://whateverorigin.org/get?url=${encodeURIComponent(url)}`
+            try {
+                const res = await fetch(url)
+                const resJson = await res.json()
+                if (resJson.status.http_code === 200) {
+                    const base64 = resJson.contents
+                    const text = atob(base64)
+                    const json: Object = JSON.parse(text)
+                    return json
+                }
+            } catch (e) {
+                return undefined
+            } finally {
+                isLoading.value = false
+            }
+        } finally {
+            isLoading.value = false
+        }
+    }
+    // Otherwise, see if we can parse it as JSON, and give a final fallback
+    else {
+        try {
+            const json: Object = JSON.parse(sharingKeyInput.value)
+            return json
+        } catch (e) {
+            return undefined
+        }
+    }
+})
+
+const display = ref<DisplaySchedule>({ events: [] })
+watchEffect(async () => {
+    const value = await sharingKeyAsJson.value
+    if (value !== undefined) {
+        display.value = util.getDisplayScheduleFromMinifiedDisplaySchedule(value as MinifiedDisplaySchedule)
+    } else {
+        display.value = {
             events: [],
         } as DisplaySchedule
     }
@@ -94,6 +161,19 @@ const eventsByMonth = computed(() => {
                             </v-btn>
                         </v-col>
                     </v-row>
+                </v-col>
+            </v-row>
+        </template>
+        <template v-else-if="isLoading">
+            <v-row justify="center">
+                <v-col class="flex-grow-0 flex-shrink-1">
+                    <v-progress-circular
+                        indeterminate
+                        size="150"
+                        width="10"
+                    >
+                        Loading...
+                    </v-progress-circular>
                 </v-col>
             </v-row>
         </template>
