@@ -1,13 +1,30 @@
 <script setup lang="ts">
 import type { Worker, AvailabilityDate } from '@/types'
 import { ref } from 'vue'
+
 import { useSetupStore } from '@/stores/setup'
 import * as util from '@/util'
+import { TagType } from '@/types'
 
 import ListToDetail from '../ListToDetail.vue'
 import TagSelect from '../TagSelect.vue'
 
 const setup = useSetupStore()
+
+const nameChangeTimeoutId = ref<number>()
+function onNameChange() {
+    // Clear any current sync pending
+    if (nameChangeTimeoutId.value !== undefined) {
+        clearTimeout(nameChangeTimeoutId.value)
+        nameChangeTimeoutId.value = undefined
+    }
+
+    // Queue an update to our system tags to match with the new worker name. We
+    // put this on a delay to debounce fast typing updates.
+    nameChangeTimeoutId.value = setTimeout(() => {
+        setup.syncSystemTags(TagType.Worker)
+    }, 500)
+}
 
 // Controls and logic for unavailability date selections
 function onRemoveExpiredClick(worker: Worker) {
@@ -70,7 +87,12 @@ const tagLogicOptions = [
         <template v-else>
             <v-row>
                 <v-col cols="12" sm="6">
-                    <v-text-field label="Name" v-model="worker.item.name" hide-details></v-text-field>
+                    <v-text-field
+                        label="Name"
+                        v-model="worker.item.name"
+                        @update:model-value="onNameChange"
+                        hide-details
+                    />
                 </v-col>
                 <v-col cols="12" sm="6">
                     <tag-select v-model="(worker.item as Worker).tags" />

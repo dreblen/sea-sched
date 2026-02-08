@@ -16,6 +16,7 @@ export enum TagType {
     Event = 2,
     Shift = 3,
     Slot = 4,
+    Worker = 5,
 }
 
 export interface Tag extends Common {

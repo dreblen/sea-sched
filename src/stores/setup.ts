@@ -126,6 +126,8 @@ export const useSetupStore = defineStore('setup', () => {
             unavailableDates: [],
             notes: ''
         })
+
+        syncSystemTags(TagType.Worker)
     }
 
     function removeWorker(id?: number) {
@@ -133,6 +135,8 @@ export const useSetupStore = defineStore('setup', () => {
             return
         }
         workers.value = workers.value.filter((w) => w.id !== id)
+
+        syncSystemTags(TagType.Worker)
     }
 
     function addWorkerUnvailableDate(workerId: number) {
@@ -245,6 +249,11 @@ export const useSetupStore = defineStore('setup', () => {
                 prefix = 'Slot: '
                 break
             }
+            case TagType.Worker: {
+                names = [...new Set(workers.value.map((w) => w.name))]
+                prefix = 'Worker: '
+                break
+            }
             default:
                 return
         }
@@ -283,6 +292,12 @@ export const useSetupStore = defineStore('setup', () => {
                                     slot.tags.push(tag.id)
                                 }
                             }
+                        }
+                        break
+                    }
+                    case TagType.Worker: {
+                        for (const worker of workers.value.filter((w) => w.name === name)) {
+                            worker.tags.push(tag.id)
                         }
                         break
                     }
@@ -331,57 +346,77 @@ export const useSetupStore = defineStore('setup', () => {
         }
 
         // Make sure all objects are tagged appropriately
-        for (const event of events.value) {
-            if (type === TagType.Event) {
-                const tag = tags.value.find((t) => t.type == type && t.name === `${prefix}${event.name}`)
+        if (type === TagType.Worker) {
+            for (const worker of workers.value) {
+                const tag = tags.value.find((t) => t.type == type && t.name === `${prefix}${worker.name}`)
                 if (tag === undefined) {
                     continue
                 }
 
-                // Remove any event tags that aren't correct
-                event.tags = event.tags.filter((id) => {
+                // Remove any worker tags that aren't correct
+                worker.tags = worker.tags.filter((id) => {
                     const t = tags.value.find((t) => t.id === id)
                     return t?.type !== type || t.id === tag.id
                 })
 
                 // Add the correct tag if needed
-                if (!event.tags.includes(tag.id)) {
-                    event.tags.push(tag.id)
+                if (!worker.tags.includes(tag.id)) {
+                    worker.tags.push(tag.id)
                 }
-            } else {
-                for (const shift of event.shifts) {
-                    if (type === TagType.Shift) {
-                        const tag = tags.value.find((t) => t.type == type && t.name === `${prefix}${shift.name}`)
-                        if (tag === undefined) {
-                            continue
-                        }
+            }
+        } else {
+            for (const event of events.value) {
+                if (type === TagType.Event) {
+                    const tag = tags.value.find((t) => t.type == type && t.name === `${prefix}${event.name}`)
+                    if (tag === undefined) {
+                        continue
+                    }
 
-                        // Remove any shift tags that aren't correct
-                        shift.tags = shift.tags.filter((id) => {
-                            const t = tags.value.find((t) => t.id === id)
-                            return t?.type !== type || t.id === tag.id
-                        })
+                    // Remove any event tags that aren't correct
+                    event.tags = event.tags.filter((id) => {
+                        const t = tags.value.find((t) => t.id === id)
+                        return t?.type !== type || t.id === tag.id
+                    })
 
-                        // Add the correct tag if needed
-                        if (!shift.tags.includes(tag.id)) {
-                            shift.tags.push(tag.id)
-                        }
-                    } else {
-                        for (const slot of shift.slots) {
-                            const tag = tags.value.find((t) => t.type == type && t.name === `${prefix}${slot.name}`)
+                    // Add the correct tag if needed
+                    if (!event.tags.includes(tag.id)) {
+                        event.tags.push(tag.id)
+                    }
+                } else {
+                    for (const shift of event.shifts) {
+                        if (type === TagType.Shift) {
+                            const tag = tags.value.find((t) => t.type == type && t.name === `${prefix}${shift.name}`)
                             if (tag === undefined) {
                                 continue
                             }
 
-                            // Remove any slot tags that aren't correct
-                            slot.tags = slot.tags.filter((id) => {
+                            // Remove any shift tags that aren't correct
+                            shift.tags = shift.tags.filter((id) => {
                                 const t = tags.value.find((t) => t.id === id)
                                 return t?.type !== type || t.id === tag.id
                             })
 
                             // Add the correct tag if needed
-                            if (!slot.tags.includes(tag.id)) {
-                                slot.tags.push(tag.id)
+                            if (!shift.tags.includes(tag.id)) {
+                                shift.tags.push(tag.id)
+                            }
+                        } else {
+                            for (const slot of shift.slots) {
+                                const tag = tags.value.find((t) => t.type == type && t.name === `${prefix}${slot.name}`)
+                                if (tag === undefined) {
+                                    continue
+                                }
+
+                                // Remove any slot tags that aren't correct
+                                slot.tags = slot.tags.filter((id) => {
+                                    const t = tags.value.find((t) => t.id === id)
+                                    return t?.type !== type || t.id === tag.id
+                                })
+
+                                // Add the correct tag if needed
+                                if (!slot.tags.includes(tag.id)) {
+                                    slot.tags.push(tag.id)
+                                }
                             }
                         }
                     }
