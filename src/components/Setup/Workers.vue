@@ -197,7 +197,7 @@ const tagLogicOptions = [
                             </template>
                             <template v-else>
                                 <v-row>
-                                    <v-col cols="6" sm="4">
+                                    <v-col cols="12" sm="4">
                                         <v-menu
                                             v-model="showDateStartSelector"
                                             :close-on-content-click="false"
@@ -221,7 +221,7 @@ const tagLogicOptions = [
                                             />
                                         </v-menu>
                                     </v-col>
-                                    <v-col cols="6" sm="4">
+                                    <v-col cols="12" sm="4">
                                         <v-menu
                                             v-model="showDateEndSelector"
                                             :close-on-content-click="false"
@@ -259,6 +259,14 @@ const tagLogicOptions = [
                                             label="...Of These Tags"
                                             hint="No Selection = Apply to All in Range"
                                             include-system
+                                        />
+                                    </v-col>
+                                    <v-col cols="12">
+                                        <v-switch
+                                            v-model="(unavailableDate.item as AvailabilityDate).isRequired"
+                                            :label="(unavailableDate.item as AvailabilityDate).isRequired ? 'Required' : 'Optional'"
+                                            color="primary"
+                                            hide-details
                                         />
                                     </v-col>
                                     <v-col cols="12">

@@ -47,6 +47,7 @@ export interface AvailabilityDate extends Tagged {
     dateEnd: string
     tagLogic: 'any'|'all'
     notes: string
+    isRequired: boolean
 }
 
 export interface Worker extends Tagged {

@@ -353,10 +353,11 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
         // Check the worker's unavailability
         ////////////////////////////////////////////////////////////////////////
         let isUnavailable = false
+        let unavailableAffinity = AssignmentAffinity.Unwanted
         let unavailableNotes = ''
         for (const unavailableDate of worker.unavailableDates) {
-            // If we have an answer already, don't proceed
-            if (isUnavailable) {
+            // If we have a required answer already, don't proceed
+            if (isUnavailable && unavailableAffinity !== AssignmentAffinity.Unwanted) {
                 break
             }
 
@@ -369,6 +370,9 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
             // to check
             if (unavailableDate.tags.length === 0) {
                 isUnavailable = true
+                if (unavailableDate.isRequired) {
+                    unavailableAffinity = AssignmentAffinity.Disallowed
+                }
                 unavailableNotes = unavailableDate.notes
                 break
             }
@@ -382,6 +386,9 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
                 // after the first positive check
                 if (unavailableDate.tagLogic === 'any' && tagMatch) {
                     isUnavailable = true
+                    if (unavailableDate.isRequired) {
+                        unavailableAffinity = AssignmentAffinity.Disallowed
+                    }
                     unavailableNotes = unavailableDate.notes
                     break
                 }
@@ -398,12 +405,15 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
             // Finish out the "all" tag logic
             if (unavailableDate.tagLogic === 'all' && allMatched) {
                 isUnavailable = true
+                if (unavailableDate.isRequired) {
+                    unavailableAffinity = AssignmentAffinity.Disallowed
+                }
                 unavailableNotes = unavailableDate.notes
                 break
             }
         }
         if (isUnavailable) {
-            workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed, notes: [unavailableNotes || 'Unavailable'] })
+            workerAffinities.push({ workerId: worker.id, affinity: unavailableAffinity, notes: [unavailableNotes || 'Unavailable'] })
             continue
         }
 
