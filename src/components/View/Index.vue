@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
+import ical, { ICalCalendarMethod } from 'ical-generator'
 
 import type { DisplaySchedule, DisplayScheduleEvent, MinifiedDisplaySchedule } from '@/types'
 
@@ -91,6 +92,70 @@ watchEffect(async () => {
     }
 })
 
+const selectedWorkerName = ref('')
+const uniqueWorkerNames = computed(() => {
+    const names = [] as string[]
+
+    for (const event of display.value.events) {
+        for (const shift of event.shifts) {
+            for (const group of shift.slotGroups) {
+                for (const slot of group.slots) {
+                    if (!names.includes(slot.workerName)) {
+                        names.push(slot.workerName)
+                    }
+                }
+            }
+        }
+    }
+
+    return names.sort()
+})
+
+const selectedWorkerCalendarContent = computed(() => {
+    if (selectedWorkerName.value === '') {
+        return undefined
+    }
+
+    const calendar = ical()
+    calendar.method(ICalCalendarMethod.PUBLISH)
+
+    for (const event of display.value.events) {
+        for (const shift of event.shifts) {
+            for (const group of shift.slotGroups) {
+                for (const slot of group.slots) {
+                    if (slot.workerName !== selectedWorkerName.value) {
+                        continue
+                    }
+
+                    calendar.createEvent({
+                        start: event.calendarDate,
+                        allDay: true,
+                        summary: `${shift.name} - ${slot.name}`
+                    })
+                }
+            }
+        }
+    }
+
+    const ics = calendar.toString()
+    return btoa(ics)
+})
+
+const calendarName = computed(() => {
+    let firstDate = '9999-01-01'
+    let lastDate = '0000-01-01'
+    for (const event of display.value.events) {
+        if (event.calendarDate < firstDate) {
+            firstDate = event.calendarDate
+        }
+        if (event.calendarDate > lastDate) {
+            lastDate = event.calendarDate
+        }
+    }
+
+    return `${firstDate} to ${lastDate}`
+})
+
 const uniqueShiftNames = computed(() => {
     const names = [] as string[]
     
@@ -133,7 +198,7 @@ const eventsByMonth = computed(() => {
 </script>
 
 <template>
-    <v-container class="fill-height">
+    <v-container>
         <template v-if="!route.params.base64">
             <v-row align="center">
                 <v-col cols="12">
@@ -187,6 +252,29 @@ const eventsByMonth = computed(() => {
             </v-row>
         </template>
         <template v-else>
+            <v-row>
+                <v-col>
+                    <v-select
+                        v-model="selectedWorkerName"
+                        label="Calendar for..."
+                        :items="uniqueWorkerNames"
+                        hint="Import this file into a calendar app"
+                        persistent-hint
+                    >
+                        <template #append="props">
+                            <v-btn
+                                :download="`${calendarName} - ${selectedWorkerName}.ics`"
+                                :href="`data:text/calendar;base64,${selectedWorkerCalendarContent}`"
+                                :disabled="selectedWorkerName === ''"
+                                append-icon="mdi-download"
+                                color="primary"
+                            >
+                                Download
+                            </v-btn>
+                        </template>
+                    </v-select>
+                </v-col>
+            </v-row>
             <v-row v-for="month in eventsByMonth">
                 <v-col>
                     <v-table striped="even">
