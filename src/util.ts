@@ -113,7 +113,8 @@ export function getMonthsAndWeeksFromDateRange(dateStart: string, dateEnd: strin
 // Helpers for managing events in stores
 ////////////////////////////////////////////////////////////////////////////////
 
-import type { GenericEvent, GenericShift, GenericSlot, Scope, TagAffinity, TagType } from '@/types'
+import type { GenericEvent, GenericShift, GenericSlot, ScheduleShape, Scope, TagAffinity } from '@/types'
+import { TagType } from '@/types'
 
 export interface EventManagementStore {
     addEvent: { (): GenericEvent|void }
@@ -320,7 +321,7 @@ export function getAssignmentAffinityType(value?: AssignmentAffinity) {
 // Determine a prioritized list of workers who are able to fill a specified
 // slot, along with an indicator of what affinity the workers in that list will
 // have with the slot
-export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule, workers: Worker[], affinitiesByTagTag: TagAffinityMapMap, returnAll?: boolean): EligibleWorker[] {
+export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule, workers: Worker[], tags: Tag[], affinitiesByTagTag: TagAffinityMapMap, scheduleShape: ScheduleShape, returnAll?: boolean): EligibleWorker[] {
     // Gather context data about slots that are in the same shift as the one
     // being considered for assignment
     const siblingSlots = gs.shift.slots.filter((l) => l.groupId === gs.slot.groupId && l.id !== gs.slot.id)
@@ -478,6 +479,86 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
         }
         if (limitAffinity !== AssignmentAffinity.Neutral) {
             workerAffinities.push({ workerId: worker.id, affinity: limitAffinity, notes: limitNotes })
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        // Check for any schedule shaping requirements
+        ////////////////////////////////////////////////////////////////////////
+
+        if (scheduleShape.minWeeksBetweenEventShift > 0) {
+            // Identify the event and shift tags associated with the current
+            // slot so we can confidently make comparisons even if they have
+            // been renamed in the parameters stage
+            const eventTag = gs.event.tags.find((id) => {
+                const tag = tags.find((t) => t.id === id)
+                if (!tag) {
+                    return false
+                }
+
+                return tag.type === TagType.Event
+            })
+            const shiftTag = gs.shift.tags.find((id) => {
+                const tag = tags.find((t) => t.id === id)
+                if (!tag) {
+                    return false
+                }
+
+                return tag.type === TagType.Shift
+            })
+
+            if (eventTag && shiftTag) {
+                // Work backwards from this event in the schedule trying to find
+                // another assignment of this worker in the same type of shift
+                const previousEvents = schedule.events
+                    .filter((e) => e.calendarDate < gs.event.calendarDate)
+                    .sort((a,b) => {
+                        if (a.calendarDate > b.calendarDate) {
+                            return -1
+                        }
+                        if (a.calendarDate < b.calendarDate) {
+                            return 1
+                        }
+                        return 0
+                    })
+                let mostRecentDate = ''
+                for (const pe of previousEvents) {
+                    if (pe.tags.includes(eventTag)) {
+                        const shift = pe.shifts.find((s) => s.tags.includes(shiftTag))
+                        if (shift) {
+                            const slot = shift.slots.find((l) => l.workerId === worker.id)
+                            if (slot) {
+                                mostRecentDate = pe.calendarDate
+                                break
+                            }
+                        }
+                    }
+                }
+
+                // If we found a match, determine the number of weeks between it
+                // and the current slot under consideration
+                if (mostRecentDate !== '') {
+                    // Get the first day of the week for the current slot
+                    const slotDate = getNormalizedDate(gs.event.calendarDate)
+                    const slotDayOfWeek = slotDate.getDay()
+                    slotDate.setDate(slotDate.getDate() - slotDayOfWeek)
+                    
+                    // Get the first day of the week for the previous assignment
+                    const previousDate = getNormalizedDate(mostRecentDate)
+                    const previousDayOfWeek = previousDate.getDay()
+                    previousDate.setDate(previousDate.getDate() - previousDayOfWeek)
+
+                    // Determine the gap between the assignments
+                    const msInDay = 1000 * 60 * 60 * 24
+                    const daysBetween = (slotDate.getTime() - previousDate.getTime()) / msInDay
+                    const weeksBetween = daysBetween / 7
+
+                    // Make sure we have met the requirement
+                    if (weeksBetween <= scheduleShape.minWeeksBetweenEventShift) {
+                        workerAffinities.push({ workerId: worker.id, affinity: AssignmentAffinity.Disallowed, notes: [`Shape: Min Weeks Between Event+Shift (${scheduleShape.minWeeksBetweenEventShift})`] })
+                        continue
+                    }
+                }
+            }
         }
 
         ////////////////////////////////////////////////////////////////////////

@@ -9,9 +9,11 @@ export interface InboundMessage {
     seed: number
     events: SeaSched.ScheduleEvent[]
     workers: SeaSched.Worker[]
+    tags: SeaSched.Tag[]
     tagAffinities: SeaSched.TagAffinity[]
     affinitiesByTagTag: SeaSched.TagAffinityMapMap
     gradeComponents: SeaSched.GradeComponent[]
+    scheduleShape: SeaSched.ScheduleShape
     isStopShort: boolean
     isComprehensive: boolean
     permutationThreshold: number
@@ -91,7 +93,7 @@ onmessage = function (ev) {
                     continue
                 }
 
-                const eligibleWorker = util.getEligibleWorkersForSlot(gs, schedule, message.workers, message.affinitiesByTagTag)
+                const eligibleWorker = util.getEligibleWorkersForSlot(gs, schedule, message.workers, message.tags, message.affinitiesByTagTag, message.scheduleShape)
                     .find((ew) => ew.workerId === workerId)
                 if (eligibleWorker === undefined) {
                     gs.slot.workerId = 0
@@ -166,7 +168,7 @@ onmessage = function (ev) {
                     let assignedWorkerId: number|undefined = undefined
                     let assignedAffinity: SeaSched.AssignmentAffinity|undefined = undefined
                     let assignedAffinityNotes: string[]|undefined = undefined
-                    const eligible = util.getEligibleWorkersForSlot(gs, schedule, message.workers, message.affinitiesByTagTag)
+                    const eligible = util.getEligibleWorkersForSlot(gs, schedule, message.workers, message.tags, message.affinitiesByTagTag, message.scheduleShape)
                     if (eligible.length > 0) {
                         // Determine the lowest assignment count and any workers
                         // currently at that count

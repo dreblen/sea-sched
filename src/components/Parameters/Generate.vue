@@ -148,7 +148,7 @@ async function generate() {
             continue
         }
 
-        let eligible = util.getEligibleWorkersForSlot(slot, baseSchedule, activeWorkers, setup.affinitiesByTagTag)
+        let eligible = util.getEligibleWorkersForSlot(slot, baseSchedule, activeWorkers, setup.tags, setup.affinitiesByTagTag, setup.scheduleShape)
         if (eligible.length === 1) {
             slot.slot.workerId = eligible[0]?.workerId
             slot.slot.affinity = eligible[0]?.affinity
@@ -241,9 +241,11 @@ async function generate() {
             seed: Math.ceil(permutationThresholdForMessage.value / numThreads) * i,
             events: baseSchedule.events,
             workers: activeWorkers,
+            tags: setup.tags,
             tagAffinities: setup.tagAffinities,
             affinitiesByTagTag: setup.affinitiesByTagTag,
             gradeComponents: setup.gradeComponents,
+            scheduleShape: setup.scheduleShape,
             isStopShort: isStopShortForMessage.value,
             isComprehensive: isComprehensiveForMessage.value,
             permutationThreshold: Math.ceil(permutationThresholdForMessage.value / numThreads),

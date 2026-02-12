@@ -556,6 +556,23 @@ export const useSetupStore = defineStore('setup', () => {
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    // Schedule Shaping
+    ////////////////////////////////////////////////////////////////////////////
+
+    const defaultScheduleShape: SeaSched.ScheduleShape = {
+        minWeeksBetweenEventShift: 0,
+    }
+    const scheduleShape = useLocalStorage('setup-schedule-shape', defaultScheduleShape)
+
+    function serializeScheduleShape() {
+        return JSON.stringify(scheduleShape.value)
+    }
+
+    function deserializeScheduleShape(json: string) {
+        scheduleShape.value = JSON.parse(json)
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
     // General
     ////////////////////////////////////////////////////////////////////////////
 
@@ -565,7 +582,8 @@ export const useSetupStore = defineStore('setup', () => {
             workers: serializeWorkers(),
             tags: serializeTags(),
             tagAffinities: serializeTagAffinities(),
-            gradeComponents: serializeGradeComponents()
+            gradeComponents: serializeGradeComponents(),
+            scheduleShape: serializeScheduleShape(),
         }
 
         return JSON.stringify(parts)
@@ -577,7 +595,8 @@ export const useSetupStore = defineStore('setup', () => {
             workers: string
             tags: string
             tagAffinities: string,
-            gradeComponents: string
+            gradeComponents: string,
+            scheduleShape: string
         }
 
         deserializeEvents(parts.events)
@@ -585,6 +604,7 @@ export const useSetupStore = defineStore('setup', () => {
         deserializeTags(parts.tags)
         deserializeTagAffinities(parts.tagAffinities)
         deserializeGradeComponents(parts.gradeComponents)
+        deserializeScheduleShape(parts.scheduleShape)
     }
 
     function reset() {
@@ -596,6 +616,7 @@ export const useSetupStore = defineStore('setup', () => {
             tags: empty,
             tagAffinities: empty,
             gradeComponents: empty,
+            scheduleShape: JSON.stringify(defaultScheduleShape),
         }))
     }
 
@@ -635,6 +656,9 @@ export const useSetupStore = defineStore('setup', () => {
         serializeGradeComponents,
         deserializeGradeComponents,
         resetGradeComponents,
+        scheduleShape,
+        serializeScheduleShape,
+        deserializeScheduleShape,
         serialize,
         deserialize,
         reset,
