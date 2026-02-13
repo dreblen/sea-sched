@@ -4,7 +4,7 @@ import { useLocalStorage, type RemovableRef } from '@vueuse/core'
 
 import type * as SeaSched from '@/types'
 
-import * as util from '@/util'
+import * as utilGeneration from '@/util/generation'
 import { useSetupStore } from './setup'
 
 export const useResultsStore = defineStore('results', () => {
@@ -30,7 +30,7 @@ export const useResultsStore = defineStore('results', () => {
         const availableWorkers = setup.workers.filter((w) => w.isActive)
         setGradeComponents(setup.gradeComponents)
 
-        schedule.grade = util.getScheduleGrade(schedule, availableWorkers, setup.tagAffinities, setup.gradeComponents)
+        schedule.grade = utilGeneration.getScheduleGrade(schedule, availableWorkers, setup.tagAffinities, setup.gradeComponents)
     }
 
     function regradeSchedules() {

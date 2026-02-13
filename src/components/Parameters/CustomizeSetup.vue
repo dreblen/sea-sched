@@ -2,7 +2,8 @@
 import { ref } from 'vue'
 import type { ScopeEvent } from '@/types'
 import { useParametersStore } from '@/stores/parameters'
-import * as util from '@/util'
+
+import * as utilDate from '@/util/date'
 
 import EventListToDetail from '../EventListToDetail.vue'
 import { watchEffect } from 'vue'
@@ -46,7 +47,7 @@ function onEventListChange(eventId?: number, eventName?: string) {
         return
     }
 
-    eventCalendarDateBuffer.value = util.getNormalizedDate(event.calendarDate)
+    eventCalendarDateBuffer.value = utilDate.getNormalizedDate(event.calendarDate)
 }
 </script>
 
@@ -98,7 +99,7 @@ function onEventListChange(eventId?: number, eventName?: string) {
                         <v-date-picker
                             v-model="eventCalendarDateBuffer"
                             show-adjacent-months
-                            @update:model-value="(event as ScopeEvent).calendarDate = util.getDateString(eventCalendarDateBuffer)"
+                            @update:model-value="(event as ScopeEvent).calendarDate = utilDate.getDateString(eventCalendarDateBuffer)"
                             @input="showEventCalendarDateSelector = false"
                             :min="parameters.scope.dateStart"
                             :max="parameters.scope.dateEnd"

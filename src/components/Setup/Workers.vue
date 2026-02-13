@@ -3,7 +3,7 @@ import type { Worker, AvailabilityDate } from '@/types'
 import { ref } from 'vue'
 
 import { useSetupStore } from '@/stores/setup'
-import * as util from '@/util'
+import * as utilDate from '@/util/date'
 import { TagType } from '@/types'
 
 import ListToDetail from '../ListToDetail.vue'
@@ -28,7 +28,7 @@ function onNameChange() {
 
 // Controls and logic for unavailability date selections
 function onRemoveExpiredClick(worker: Worker) {
-    const cutoff = util.getDateString()
+    const cutoff = utilDate.getDateString()
     worker.unavailableDates = worker.unavailableDates.filter((ad) => ad.dateEnd >= cutoff)
 }
 
@@ -51,7 +51,7 @@ function onDateListChange(unavailableDateId?: number, dateString?: string) {
         if (s === undefined) {
             continue
         }
-        local.push(util.getNormalizedDate(s))
+        local.push(utilDate.getNormalizedDate(s))
     }
 
     dateStartBuffer.value = local[0] as Date
@@ -62,7 +62,7 @@ function onDatePickerChange(unavailableDate: AvailabilityDate, type: 'start'|'en
     const buffer = (type === 'start') ? dateStartBuffer.value : dateEndBuffer.value
     const propName = (type === 'start') ? 'dateStart' : 'dateEnd'
 
-    unavailableDate[propName] = util.getDateString(buffer)
+    unavailableDate[propName] = utilDate.getDateString(buffer)
     unavailableDate.name = unavailableDate.dateStart + ' to ' + unavailableDate.dateEnd
 }
 
@@ -228,7 +228,7 @@ const tagLogicOptions = [
                                                 <v-text-field
                                                     v-bind="props"
                                                     label="Range Start"
-                                                    :model-value="util.getDateString(dateStartBuffer)"
+                                                    :model-value="utilDate.getDateString(dateStartBuffer)"
                                                     prepend-inner-icon="mdi-calendar"
                                                     :readonly="true"
                                                     hide-details
@@ -252,7 +252,7 @@ const tagLogicOptions = [
                                                 <v-text-field
                                                     v-bind="props"
                                                     label="Range End"
-                                                    :model-value="util.getDateString(dateEndBuffer)"
+                                                    :model-value="utilDate.getDateString(dateEndBuffer)"
                                                     prepend-inner-icon="mdi-calendar"
                                                     :readonly="true"
                                                     hide-details

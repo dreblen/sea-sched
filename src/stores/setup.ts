@@ -3,7 +3,8 @@ import { defineStore } from 'pinia'
 import { useLocalStorage } from '@vueuse/core'
 
 import { useParametersStore } from './parameters'
-import * as util from '@/util'
+import * as utilEvent from '@/util/event'
+import * as utilDate from '@/util/date'
 
 import type * as SeaSched from '@/types'
 import { GradeComponentType, TagType } from '@/types'
@@ -26,14 +27,14 @@ export const useSetupStore = defineStore('setup', () => {
     }
 
     function addEvent() {
-        const newEvent = util.addEvent(events.value)
+        const newEvent = utilEvent.addEvent(events.value)
         newEvent.recurrences = []
 
         syncSystemTags(TagType.Event)
     }
 
     function removeEvent(id?: number) {
-        events.value = (util.removeEvent(events.value, id) as SeaSched.Event[])
+        events.value = (utilEvent.removeEvent(events.value, id) as SeaSched.Event[])
 
         syncSystemTags(TagType.Event)
         syncSystemTags(TagType.Shift)
@@ -41,26 +42,26 @@ export const useSetupStore = defineStore('setup', () => {
     }
 
     function addEventShift(eventId: number) {
-        util.addEventShift(events.value, eventId)
+        utilEvent.addEventShift(events.value, eventId)
 
         syncSystemTags(TagType.Shift)
     }
 
     function removeEventShift(eventId?: number, shiftId?: number) {
-        util.removeEventShift(events.value, eventId, shiftId)
+        utilEvent.removeEventShift(events.value, eventId, shiftId)
 
         syncSystemTags(TagType.Shift)
         syncSystemTags(TagType.Slot)
     }
 
     function addShiftSlot(eventId: number, shiftId: number) {
-        util.addShiftSlot(events.value, eventId, shiftId)
+        utilEvent.addShiftSlot(events.value, eventId, shiftId)
 
         syncSystemTags(TagType.Slot)
     }
 
     function removeShiftSlot(eventId?: number, shiftId?: number, slotId?: number) {
-        util.removeShiftSlot(events.value, eventId, shiftId, slotId)
+        utilEvent.removeShiftSlot(events.value, eventId, shiftId, slotId)
 
         syncSystemTags(TagType.Slot)
     }
@@ -147,7 +148,7 @@ export const useSetupStore = defineStore('setup', () => {
 
         const maxUnvailableDateId = worker.unavailableDates.reduce((p, c) => (p > c.id) ? p : c.id, 0)
 
-        const d = util.getDateString()
+        const d = utilDate.getDateString()
         worker.unavailableDates.push({
             id: maxUnvailableDateId + 1,
             name: `${d} to ${d}`,

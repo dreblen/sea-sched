@@ -1,293 +1,27 @@
-// Given a string in the format of YYYY-MM-DD, return a JS Date object for
-// that date at midnight local time, to avoid skewing issues
-export function getNormalizedDate(dateString: string) {
-    const buffer = new Date(dateString + 'T00:00:00Z')
-    buffer.setMinutes(buffer.getMinutes() + buffer.getTimezoneOffset())
-    return buffer
-}
-
-// Given a JS Date object, return a string representing it as YYYY-MM-DD
-export function getDateString(date?: Date) {
-    if (date === undefined) {
-        date = new Date()
-    }
-    return date.toISOString().split('T')[0] as string
-}
-
-export function getLargeNumberDisplayForm(value: number): string {
-    const summaryThresholds = [
-        { power: 3, append: 'K' },
-        { power: 6, append: 'M' },
-        { power: 9, append: 'B' },
-        { power: 12, append: 'T' },
-        { power: 15, append: '' },
-    ]
-
-    // Find the largest power increment that this value matches
-    let power = 0
-    for (const threshold of summaryThresholds) {
-        if (value >= Math.pow(10,threshold.power)) {
-            power = threshold.power
-        }
-    }
-
-    // Summarize the number into that power's format
-    const threshold = summaryThresholds.find((t) => t.power === power)
-    if (threshold === undefined) {
-        // If we didn't pass even the lowest threshold, we can use the
-        // number as is
-        return value.toString()
-    }
-
-    // The special case of the highest power gets treated with E notation
-    if (threshold.append === '') {
-        return value.toExponential(1)
-    }
-
-    // Normal scenario divides by the power value and adds the symbol
-    const divided = value / Math.pow(10,threshold.power)
-    const rounded = Math.round(divided * 10) / 10
-    return `${rounded}${threshold.append}`
-}
-
-export function getMonthsAndWeeksFromDateRange(dateStart: string, dateEnd: string) {
-    const months = [] as { dateStart: string, dateEnd: string }[]
-    const weeks = [] as { dateStart: string, dateEnd: string }[]
-    
-    // Iterate our range and identify weeks and months within it
-    const maxDate = getNormalizedDate(dateEnd)
-    const bufferDate = getNormalizedDate(dateStart)
-    let weekStart = getDateString(bufferDate)
-    let monthStart = getDateString(bufferDate)
-    while (bufferDate <= maxDate) {
-        const dateString = getDateString(bufferDate)
-        const tomorrow = getNormalizedDate(dateString)
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        const tomorrowString = getDateString(tomorrow)
-
-        // Finish a week?
-        if (bufferDate.getDay() === 6) {
-            weeks.push({
-                dateStart: weekStart,
-                dateEnd: dateString
-            })
-            weekStart = tomorrowString
-        }
-
-        // Finish a month?
-        if (tomorrow.getDate() === 1) {
-            months.push({
-                dateStart: monthStart,
-                dateEnd: dateString
-            })
-            monthStart = tomorrowString
-        }
-
-        // Prep the next iteration
-        bufferDate.setDate(bufferDate.getDate() + 1)
-    }
-
-    // Finish out any incomplete weeks or months
-    bufferDate.setDate(bufferDate.getDate() - 1)
-    const dateString = getDateString(bufferDate)
-    if (dateString >= weekStart) {
-        weeks.push({
-            dateStart: weekStart,
-            dateEnd: dateString
-        })
-    }
-    if (dateString >= monthStart) {
-        months.push({
-            dateStart: monthStart,
-            dateEnd: dateString
-        })
-    }
-
-    return {
-        months,
-        weeks
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Helpers for managing events in stores
-////////////////////////////////////////////////////////////////////////////////
-
-import type { GenericEvent, GenericShift, GenericSlot, ScheduleShape, Scope, TagAffinity } from '@/types'
-import { TagType } from '@/types'
-
-export interface EventManagementStore {
-    addEvent: { (): GenericEvent|void }
-    removeEvent: { (eventId?: number): void }
-    addEventShift: { (eventId: number): GenericShift|void }
-    removeEventShift: { (eventId?: number, shiftId?: number): void }
-    addShiftSlot: { (eventId: number, shiftId: number): GenericSlot|void }
-    removeShiftSlot: { (eventId?: number, shiftId?: number, slotId?: number): void }
-    syncSystemTags?: { (type: TagType): void}
-}
-
-export function addEvent(events: GenericEvent[]) {
-    const maxEventId = events.reduce((p, c) => (p > c.id) ? p : c.id, 0)
-    const newEvent: GenericEvent = {
-        id: maxEventId + 1,
-        name: `New Event ${maxEventId + 1}`,
-        tags: [],
-        shifts: [],
-    }
-    
-    events.push(newEvent)
-    return newEvent
-}
-
-export function removeEvent(events: GenericEvent[], id?: number) {
-    if (id === undefined) {
-        return
-    }
-    return events.filter((e) => e.id !== id)
-}
-
-export function addEventShift(events: GenericEvent[], eventId: number) {
-    const event = events.find((e) => e.id === eventId)
-    if (!event) {
-        return
-    }
-
-    const maxShiftId = event.shifts.reduce((p, c) => (p > c.id) ? p : c.id, 0)
-    const newShift: GenericShift = {
-        id: maxShiftId + 1,
-        name: `New Shift ${maxShiftId + 1}`,
-        tags: [],
-        slots: []
-    }
-
-    event.shifts.push(newShift)
-    return newShift
-}
-
-export function removeEventShift(events: GenericEvent[], eventId?: number, shiftId?: number) {
-    if (eventId === undefined || shiftId === undefined) {
-        return
-    }
-
-    const event = events.find((e) => e.id === eventId)
-    if (!event) {
-        return
-    }
-
-    event.shifts = event.shifts.filter((s) => s.id !== shiftId)
-}
-
-export function addShiftSlot(events: GenericEvent[], eventId: number, shiftId: number) {
-    const event = events.find((e) => e.id === eventId)
-    if (!event) {
-        return
-    }
-
-    const shift = event.shifts.find((s) => s.id === shiftId)
-    if (!shift) {
-        return
-    }
-
-    const maxSlotId = shift.slots.reduce((p, c) => (p > c.id) ? p : c.id, 0)
-    const newSlot: GenericSlot = {
-        id: maxSlotId + 1,
-        name: `New Slot ${maxSlotId + 1}`,
-        tags: [],
-        groupId: 1,
-        isRequired: true
-    }
-
-    shift.slots.push(newSlot)
-    return newSlot
-}
-
-export function removeShiftSlot(events: GenericEvent[], eventId?: number, shiftId?: number, slotId?: number) {
-    if (eventId === undefined || shiftId === undefined || slotId === undefined) {
-        return
-    }
-
-    const event = events.find((e) => e.id === eventId)
-    if (!event) {
-        return
-    }
-
-    const shift = event.shifts.find((s) => s.id === shiftId)
-    if (!shift) {
-        return
-    }
-
-    shift.slots = shift.slots.filter((s) => s.id !== slotId)
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Helpers for schedule generation
-////////////////////////////////////////////////////////////////////////////////
-
-import type { EligibleWorker, GradeComponent, ScopeEvent, ScheduleGrade, Schedule, ScheduleEvent, ScheduleShift, ScheduleSlot, Tag, TagAffinityMapMap, Worker } from '@/types'
-import { AssignmentAffinity, AssignmentAffinityType, GradeComponentType } from '@/types'
+import type { EligibleWorker, GradeComponent, Scope, ScopeEvent, ScheduleGrade, Schedule, ScheduleEvent, ScheduleShape, ScheduleShift, ScheduleSlot, Tag, TagAffinity, TagAffinityMapMap, Worker } from '@/types'
+import { AssignmentAffinity, AssignmentAffinityType, GradeComponentType, TagType } from '@/types'
 import md5 from 'md5'
 
-// Create a new schedule object based on but distinct from an existing event
-// list (either from a scope or another schedule)
-export function newSchedule(events: ScopeEvent[]|ScheduleEvent[], shouldCopyAssignments?: boolean) {
-    const schedule: Schedule = {
-        id: 0,
-        name: '',
-        events: [],
-        steps: []
-    }
+import * as utilDate from '@/util/date'
+import * as utilNumber from '@/util/number'
 
-    for (const event of events) {
-        const newEvent: ScheduleEvent = {
-            id: event.id,
-            name: event.name,
-            tags: event.tags.slice(),
-            shifts: [],
-            calendarDate: event.calendarDate
-        }
-
-        for (const shift of event.shifts) {
-            const newShift: ScheduleShift = {
-                id: shift.id,
-                name: shift.name,
-                tags: shift.tags.slice(),
-                slots: []
-            }
-
-            for (const slot of shift.slots) {
-                const newSlot: ScheduleSlot = {
-                    id: slot.id,
-                    name: slot.name,
-                    tags: slot.tags.slice(),
-                    groupId: slot.groupId,
-                    isRequired: slot.isRequired
-                }
-
-                if (shouldCopyAssignments === true) {
-                    newSlot.workerId = (slot as ScheduleSlot).workerId
-                    newSlot.affinity = (slot as ScheduleSlot).affinity
-                    newSlot.affinityNotes = (slot as ScheduleSlot).affinityNotes
-                }
-
-                newShift.slots.push(newSlot)
-            }
-
-            newEvent.shifts.push(newShift)
-        }
-
-        schedule.events.push(newEvent)
-    }
-
-    return schedule
-}
-
+/**
+ * Flat representation of a event/shift/slot combination. The slot property is a
+ * member of shift.slots, and the shift property is a member of event.shifts.
+ */
 export interface GenerationSlot {
     event: ScheduleEvent
     shift: ScheduleShift
     slot: ScheduleSlot
 }
 
-// Create a new set of generation slots based on an events list
+/**
+ * Create a new set of generation slots based on an events list.
+ * 
+ * @param events List of scope or schedule events to flatten.
+ * @returns Array of flat GenerationSlot objects representing all slots in the
+ * specified schedule.
+ */
 export function newGenerationSlots(events: ScopeEvent[]|ScheduleEvent[]) {
     const generationSlots = [] as GenerationSlot[]
     for (const event of events) {
@@ -305,6 +39,70 @@ export function newGenerationSlots(events: ScopeEvent[]|ScheduleEvent[]) {
     return generationSlots
 }
 
+/**
+ * Calculates an MD5 hash representing the state of a specified Scope object.
+ * This can be used to compare the current parameters to those used to generate
+ * a previous schedule to see if they are compatible.
+ * 
+ * @param scope The scope to calculate a hash value for.
+ * @param tags List of tags to use for ID lookups (e.g., setup.tags).
+ * @returns MD5 hash of the specified scope.
+ */
+export function getScopeHash(scope: Scope, tags: Tag[]) {
+    interface CoreTagged {
+        name: string
+        tags: string[]
+    }
+    interface CoreSlot extends CoreTagged {
+        groupId: number
+        isRequired: boolean
+    }
+    interface CoreShift extends CoreTagged {
+        slots: CoreSlot[]
+    }
+    interface CoreEvent extends CoreTagged {
+        shifts: CoreShift[]
+        calendarDate: string
+    }
+
+    const tagLookupMapper = (id: number): string => (tags.find((t) => t.id === id)?.name || '<invalid>')
+
+    const coreData = [] as CoreEvent[]
+    for (const event of scope.events) {
+        const newEvent: CoreEvent = {
+            name: event.name,
+            tags: event.tags.map(tagLookupMapper),
+            shifts: [],
+            calendarDate: event.calendarDate
+        }
+        for (const shift of event.shifts) {
+            const newShift: CoreShift = {
+                name: shift.name,
+                tags: shift.tags.map(tagLookupMapper),
+                slots: []
+            }
+            for (const slot of shift.slots) {
+                newShift.slots.push({
+                    name: slot.name,
+                    tags: slot.tags.map(tagLookupMapper),
+                    groupId: slot.groupId,
+                    isRequired: slot.isRequired
+                })
+            }
+            newEvent.shifts.push(newShift)
+        }
+        coreData.push(newEvent)
+    }
+
+    return md5(JSON.stringify(coreData))
+}
+
+/**
+ * Simple mapping of specific affinities to their general type.
+ * 
+ * @param value An assignment affinity.
+ * @returns The type the input affinity belongs to.
+ */
 export function getAssignmentAffinityType(value?: AssignmentAffinity) {
     switch (value) {
         case AssignmentAffinity.Disallowed:
@@ -318,9 +116,24 @@ export function getAssignmentAffinityType(value?: AssignmentAffinity) {
     }
 }
 
-// Determine a prioritized list of workers who are able to fill a specified
-// slot, along with an indicator of what affinity the workers in that list will
-// have with the slot
+/**
+ * Determine a prioritized list of workers who are able to fill a specified
+ * slot, along with an indicator of what affinity the workers in that list will
+ * have with the slot.
+ * 
+ * @param gs The flat generation slot being considered for scheduling.
+ * @param schedule The full schedule to provide context for the generation slot.
+ * @param workers List of workers to use for ID lookups (e.g., setup.workers).
+ * @param tags List of tags to use for ID lookups (e.g., setup.tags).
+ * @param affinitiesByTagTag Mapping of tag-to-tag affinities (e.g.,
+ * setup.affinitiesByTagTag).
+ * @param scheduleShape Configuration of schedule shaping controls (e.g.,
+ * setup.scheduleShape).
+ * @param returnAll If true, all workers considered will be returned with their
+ * affinity, even if that is "disallowed."
+ * @returns List of worker IDs, assignment affinities, and associated
+ * descriptive notes.
+ */
 export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule, workers: Worker[], tags: Tag[], affinitiesByTagTag: TagAffinityMapMap, scheduleShape: ScheduleShape, returnAll?: boolean): EligibleWorker[] {
     // Gather context data about slots that are in the same shift as the one
     // being considered for assignment
@@ -335,7 +148,7 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
     // don't want to recalculate it per worker/limit.
     const scheduleDateStart = schedule.events.reduce((p, v) => (v.calendarDate < p) ? v.calendarDate : p,'9999-01-01')
     const scheduleDateEnd = schedule.events.reduce((p, v) => (v.calendarDate > p) ? v.calendarDate : p,'0000-01-01')
-    const scheduleScope = getMonthsAndWeeksFromDateRange(scheduleDateStart, scheduleDateEnd)
+    const scheduleScope = utilDate.getMonthsAndWeeksFromDateRange(scheduleDateStart, scheduleDateEnd)
     const thisMonth = scheduleScope.months.find((m) => gs.event.calendarDate >= m.dateStart && gs.event.calendarDate <= m.dateEnd)
     const thisWeek = scheduleScope.weeks.find((w) => gs.event.calendarDate >= w.dateStart && gs.event.calendarDate <= w.dateEnd)
 
@@ -538,12 +351,12 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
                 // and the current slot under consideration
                 if (mostRecentDate !== '') {
                     // Get the first day of the week for the current slot
-                    const slotDate = getNormalizedDate(gs.event.calendarDate)
+                    const slotDate = utilDate.getNormalizedDate(gs.event.calendarDate)
                     const slotDayOfWeek = slotDate.getDay()
                     slotDate.setDate(slotDate.getDate() - slotDayOfWeek)
                     
                     // Get the first day of the week for the previous assignment
-                    const previousDate = getNormalizedDate(mostRecentDate)
+                    const previousDate = utilDate.getNormalizedDate(mostRecentDate)
                     const previousDayOfWeek = previousDate.getDay()
                     previousDate.setDate(previousDate.getDate() - previousDayOfWeek)
 
@@ -722,89 +535,24 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
     return results
 }
 
-export function getScopeHash(scope: Scope, tags: Tag[]) {
-    interface CoreTagged {
-        name: string
-        tags: string[]
-    }
-    interface CoreSlot extends CoreTagged {
-        groupId: number
-        isRequired: boolean
-    }
-    interface CoreShift extends CoreTagged {
-        slots: CoreSlot[]
-    }
-    interface CoreEvent extends CoreTagged {
-        shifts: CoreShift[]
-        calendarDate: string
-    }
-
-    const tagLookupMapper = (id: number): string => (tags.find((t) => t.id === id)?.name || '<invalid>')
-
-    const coreData = [] as CoreEvent[]
-    for (const event of scope.events) {
-        const newEvent: CoreEvent = {
-            name: event.name,
-            tags: event.tags.map(tagLookupMapper),
-            shifts: [],
-            calendarDate: event.calendarDate
-        }
-        for (const shift of event.shifts) {
-            const newShift: CoreShift = {
-                name: shift.name,
-                tags: shift.tags.map(tagLookupMapper),
-                slots: []
-            }
-            for (const slot of shift.slots) {
-                newShift.slots.push({
-                    name: slot.name,
-                    tags: slot.tags.map(tagLookupMapper),
-                    groupId: slot.groupId,
-                    isRequired: slot.isRequired
-                })
-            }
-            newEvent.shifts.push(newShift)
-        }
-        coreData.push(newEvent)
-    }
-
-    return md5(JSON.stringify(coreData))
-}
-
-export function getScheduleHash(schedule: Schedule) {
-    const assignments = [] as number[]
-    for (const event of schedule.events) {
-        for (const shift of event.shifts) {
-            for (const slot of shift.slots) {
-                let workerId = slot.workerId
-                if (workerId === undefined) {
-                    workerId = -1
-                }
-                assignments.push(workerId)
-            }
-        }
-    }
-    return md5(JSON.stringify(assignments))
-}
-
-export function serializeSchedule(schedule: Schedule) {
-    return JSON.stringify(schedule)
-}
-
-export function deserializeSchedule(json: string) {
-    return JSON.parse(json) as Schedule
-}
-
-export function getStandardDeviation(valueList: number[]) {
-    const avgValue = valueList.reduce((t,v) => t+v,0.0) / valueList.length
-    const deviations = valueList.map((v) => Math.pow(v - avgValue,2))
-    const numAssignmentVariance = deviations.reduce((t,v) => t+v,0.0) / deviations.length
-    return Math.sqrt(numAssignmentVariance)
-}
-
-// Calculate a grade for a schedule based on its coverage and alignment with tag
-// affinity suggestions (affinity requirements are already considered during the
-// generation process).
+/**
+ * Calculate a grade for a schedule based on its coverage and alignment with tag
+ * affinity suggestions (affinity requirements are already considered during the
+ * generation process). Other factors are included, and their relative
+ * importance is controlled by user-configured grade weighting values.
+ * 
+ * @param schedule The full schedule to determine a grade for.
+ * @param availableWorkers List of workers that should be considered as being
+ * available for scheduling when making calculations like assignment count
+ * balance (e.g., setup.workers where isActive == true).
+ * @param tagAffinities List of configured tag affinities that should be
+ * considered when evaluating what would be the best possible affinity alignment
+ * (e.g., setup.tagAffinities).
+ * @param gradeComponents List of configured grade weighting values to use for
+ * final calculations (e.g., setup.gradeComponents).
+ * @returns New schedule grade object containing an overall score and results
+ * for each of the specified components.
+ */
 export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[], tagAffinities: TagAffinity[], gradeComponents: GradeComponent[]) {
     const grade: ScheduleGrade = {
         overall: 0,
@@ -966,7 +714,7 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
         // with the baseline average for comparison when determining the final
         // grade
         const avgAssignmentSpacing = avgAssignmentSpacings.reduce((t,v) => t+v,0.0) / avgAssignmentSpacings.length
-        const assignmentSpacingStandardDeviation = getStandardDeviation(avgAssignmentSpacings)
+        const assignmentSpacingStandardDeviation = utilNumber.getStandardDeviation(avgAssignmentSpacings)
 
         // - Convert our assignment step details into segment summaries by
         // worker so we can calculate spread
@@ -1092,9 +840,9 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
 
         // - Calculate the standard deviations of our shift and slot numbers
         const avgUniqueShifts = numUniqueShiftsPerWorker.reduce((t,v) => t+v,0.0) / numUniqueShiftsPerWorker.length
-        const shiftsStandardDeviation = getStandardDeviation(numUniqueShiftsPerWorker)
+        const shiftsStandardDeviation = utilNumber.getStandardDeviation(numUniqueShiftsPerWorker)
         const avgUniqueSlots = numUniqueSlotsPerWorker.reduce((t,v) => t+v,0.0) / numUniqueSlotsPerWorker.length
-        const slotsStandardDeviation = getStandardDeviation(numUniqueSlotsPerWorker)
+        const slotsStandardDeviation = utilNumber.getStandardDeviation(numUniqueSlotsPerWorker)
 
         // - Finalize our grade
         let shiftPortion = (avgUniqueShifts - (shiftsStandardDeviation / numUniqueShifts)) / numUniqueShifts
@@ -1269,227 +1017,4 @@ export function getScheduleGrade(schedule: Schedule, availableWorkers: Worker[],
     grade.overall = Math.round(grade.overall * 10) / 10
 
     return grade
-}
-
-// Convert a base-10 number into an array of digits representing a number of an
-// arbitrary base. Example: original = 10, base = 2 returns [1,0,1,0]. This is
-// used for comprehensive schedule generation to convert a single seed number
-// into usable slot assignments.
-export function getBase10toBaseX(original: number, base: number, arrayPadding?: number) {
-    // Determine the highest power we need to work with
-    let topPower = 0
-    for (let i = 0; ; i++) {
-        if (Math.pow(base, i) > original) {
-            topPower = i - 1
-            break
-        }
-    }
-
-    // Iterate down from the highest power, reducing our accumulator
-    const results = [] as number[]
-    let balance = original
-    for (let i = topPower; i >= 0; i--) {
-        for (let j = 0; j < base; j++) {
-            // If this power is higher than the remaining balance on its own,
-            // skip it and move down
-            if (Math.pow(base, i) > balance) {
-                results.push(0)
-                break
-            }
-
-            // Otherwise, calculat our limit within this power
-            const p = j * Math.pow(base, i)
-
-            if (p > balance) {
-                results.push(j - 1)
-                balance -= (j - 1) * Math.pow(base, i)
-                break
-            } else if (j === base - 1) {
-                results.push(j)
-                balance -= p
-                break
-            }
-        }
-    }
-
-    // Pad the results as needed
-    if (arrayPadding !== undefined) {
-        const diff = arrayPadding - results.length
-        for (let i = 0; i < diff; i++) {
-            results.unshift(0)
-        }
-    }
-
-    return results
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Helpers for schedule display
-////////////////////////////////////////////////////////////////////////////////
-
-import type { DisplaySchedule, DisplayScheduleSlotGroup, DisplayScheduleShift, DisplayScheduleEvent } from '@/types'
-import type { MinifiedDisplaySchedule, MinifiedDisplayScheduleSlotGroup, MinifiedDisplayScheduleShift, MinifiedDisplayScheduleEvent } from '@/types'
-
-export function getConvertedAffinityNotes(notes: string[], tags: Tag[]) {
-    const workingCopy = notes.slice()
-
-    for (const i in workingCopy) {
-        const currentNote = workingCopy[i] as string
-
-        // Test if this is a tag affinity note
-        const parts = currentNote.split('|')
-        if (parts.length !== 2) {
-            continue
-        }
-        const id1 = parseInt(parts[0] as string)
-        const id2 = parseInt(parts[1] as string)
-        if (isNaN(id1) || isNaN(id2)) {
-            continue
-        }
-
-        // Look up the tag names and build a new note
-        const tag1 = tags.find((t) => t.id === id1)
-        const tag2 = tags.find((t) => t.id === id2)
-        workingCopy[i] = `"${tag1?.name}" / "${tag2?.name}"`
-    }
-
-    return workingCopy
-}
-
-export function getDisplayScheduleFromSchedule(schedule: Schedule, workers: Worker[]) {
-    const ds: DisplaySchedule = {
-        events: []
-    }
-
-    for (const event of schedule.events) {
-        const newEvent: DisplayScheduleEvent = {
-            name: event.name,
-            calendarDate: event.calendarDate,
-            shifts: [],
-        }
-
-        for (const shift of event.shifts) {
-            const newShift: DisplayScheduleShift = {
-                name: shift.name,
-                slotGroups: [],
-            }
-
-            const uniqueGroupIds = [...new Set(shift.slots.map((l) => l.groupId))].sort()
-            for (const groupId of uniqueGroupIds) {
-                const newGroup: DisplayScheduleSlotGroup = {
-                    slots: []
-                }
-
-                const slots = shift.slots.filter((l) => l.groupId === groupId)
-                for (const slot of slots) {
-                    newGroup.slots.push({
-                        name: slot.name,
-                        workerName: workers.find((w) => w.id === slot.workerId)?.name || 'N/A',
-                    })
-                }
-
-                newShift.slotGroups.push(newGroup)
-            }
-
-            newEvent.shifts.push(newShift)
-        }
-
-        ds.events.push(newEvent)
-    }
-
-    return ds
-}
-
-export function getMinifiedDisplayScheduleFromDisplaySchedule(schedule: DisplaySchedule) {
-    const minified: MinifiedDisplaySchedule = {
-        e: [],
-        s: []
-    }
-
-    const getOrAddStringIndex = function(value: string) {
-        const i = minified.s.findIndex((v) => v === value)
-        if (i !== -1) {
-            return i
-        } else {
-            return minified.s.push(value) - 1
-        }
-    }
-
-    for (const event of schedule.events) {
-        const newEvent: MinifiedDisplayScheduleEvent = {
-            n: getOrAddStringIndex(event.name),
-            d: getOrAddStringIndex(event.calendarDate),
-            s: [],
-        }
-
-        for (const shift of event.shifts) {
-            const newShift: MinifiedDisplayScheduleShift = {
-                n: getOrAddStringIndex(shift.name),
-                g: [],
-            }
-
-            for (const group of shift.slotGroups) {
-                const newGroup: MinifiedDisplayScheduleSlotGroup = {
-                    s: [],
-                }
-
-                for (const slot of group.slots) {
-                    newGroup.s.push({
-                        n: getOrAddStringIndex(slot.name),
-                        w: getOrAddStringIndex(slot.workerName),
-                    })
-                }
-
-                newShift.g.push(newGroup)
-            }
-
-            newEvent.s.push(newShift)
-        }
-
-        minified.e.push(newEvent)
-    }
-
-    return minified
-}
-
-export function getDisplayScheduleFromMinifiedDisplaySchedule(minified: MinifiedDisplaySchedule) {
-    const schedule: DisplaySchedule = {
-        events: []
-    }
-
-    for (const event of minified.e) {
-        const newEvent: DisplayScheduleEvent = {
-            name: minified.s[event.n] || '',
-            calendarDate: minified.s[event.d] || '',
-            shifts: [],
-        }
-
-        for (const shift of event.s) {
-            const newShift: DisplayScheduleShift = {
-                name: minified.s[shift.n] || '',
-                slotGroups: []
-            }
-
-            for (const group of shift.g) {
-                const newGroup: DisplayScheduleSlotGroup = {
-                    slots: [],
-                }
-
-                for (const slot of group.s) {
-                    newGroup.slots.push({
-                        name: minified.s[slot.n] || '',
-                        workerName: minified.s[slot.w] || '',
-                    })
-                }
-
-                newShift.slotGroups.push(newGroup)
-            }
-
-            newEvent.shifts.push(newShift)
-        }
-
-        schedule.events.push(newEvent)
-    }
-
-    return schedule
 }

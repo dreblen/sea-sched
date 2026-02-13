@@ -7,7 +7,9 @@ import { useSetupStore } from '@/stores/setup'
 import { useParametersStore } from '@/stores/parameters'
 import { useResultsStore } from '@/stores/results'
 
-import * as util from '@/util'
+import * as utilNumber from '@/util/number'
+import * as utilSchedule from '@/util/schedule'
+import * as utilGeneration from '@/util/generation'
 
 import GenerationWorker from '@/generation-worker?worker'
 import type { InboundMessage, OutboundMessage, OutboundProgressData, OutboundResultData } from '@/generation-worker'
@@ -86,7 +88,7 @@ const allStats = [
     { title: 'Shifts', value: numShifts },
     { title: 'Slots', value: numSlots },
     { title: 'Workers', value: numWorkers },
-    { title: 'Possible Schedules', value: util.getLargeNumberDisplayForm(numPermutations) },
+    { title: 'Possible Schedules', value: utilNumber.getLargeNumberDisplayForm(numPermutations) },
 ]
 
 // Basic generation controls, building off of what's found in the parameters
@@ -112,7 +114,7 @@ async function generate() {
     await nextTick()
 
     // Clear out any previous results
-    results.scopeHash = util.getScopeHash(parameters.scope, setup.tags)
+    results.scopeHash = utilGeneration.getScopeHash(parameters.scope, setup.tags)
     results.clearSchedules()
     results.setScopeSegments(parameters.scope.weeks, parameters.scope.months)
     results.setGradeComponents(setup.gradeComponents)
@@ -120,12 +122,12 @@ async function generate() {
 
     // Establish a base of prefilled slot assignments that can be a starting
     // point for every schedule attempt:
-    const baseSchedule = util.newSchedule(eligibleEvents)
-    const baseGenerationSlots = util.newGenerationSlots(baseSchedule.events)
+    const baseSchedule = utilSchedule.newSchedule(eligibleEvents)
+    const baseGenerationSlots = utilGeneration.newGenerationSlots(baseSchedule.events)
 
     // - From a previously generated schedule's selected steps
     if (useBaseScheduleForMessage.value && parameters.baseSchedule) {
-        const gss = util.newGenerationSlots(parameters.baseSchedule.events)
+        const gss = utilGeneration.newGenerationSlots(parameters.baseSchedule.events)
         for (const gs of gss.filter((gs) => gs.slot.workerId !== undefined)) {
             const target = baseGenerationSlots.find((t) => t.event.id === gs.event.id && t.shift.id === gs.shift.id && t.slot.id === gs.slot.id)
             if (target === undefined) {
@@ -148,7 +150,7 @@ async function generate() {
             continue
         }
 
-        let eligible = util.getEligibleWorkersForSlot(slot, baseSchedule, activeWorkers, setup.tags, setup.affinitiesByTagTag, setup.scheduleShape)
+        let eligible = utilGeneration.getEligibleWorkersForSlot(slot, baseSchedule, activeWorkers, setup.tags, setup.affinitiesByTagTag, setup.scheduleShape)
         if (eligible.length === 1) {
             slot.slot.workerId = eligible[0]?.workerId
             slot.slot.affinity = eligible[0]?.affinity
@@ -335,7 +337,7 @@ watchEffect(() => {
                                     :disabled="isGenerating"
                                     label="Maximum Attempts"
                                     :min="1"
-                                    :hint="parameters.permutationThreshold ? util.getLargeNumberDisplayForm(parameters.permutationThreshold) : ''"
+                                    :hint="parameters.permutationThreshold ? utilNumber.getLargeNumberDisplayForm(parameters.permutationThreshold) : ''"
                                     persistent-hint
                                 />
                             </v-col>

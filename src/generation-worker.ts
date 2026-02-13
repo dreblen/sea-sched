@@ -1,5 +1,8 @@
 import type * as SeaSched from '@/types'
-import * as util from '@/util'
+
+import * as utilNumber from '@/util/number'
+import * as utilSchedule from '@/util/schedule'
+import * as utilGeneration from '@/util/generation'
 
 import { AssignmentAffinity } from '@/types'
 
@@ -43,12 +46,12 @@ onmessage = function (ev) {
     const scheduleHashes = [] as string[]
     for (let i = 0; i < message.permutationThreshold; i++) {
         const seed = message.seed + i
-        const schedule = util.newSchedule(message.events, true)
-        const generationSlots = util.newGenerationSlots(schedule.events)
+        const schedule = utilSchedule.newSchedule(message.events, true)
+        const generationSlots = utilGeneration.newGenerationSlots(schedule.events)
 
         // Comprehensive generation method
         if (message.isComprehensive) {
-            const digits = util.getBase10toBaseX(seed, message.workers.length + 1, generationSlots.length)
+            const digits = utilNumber.getBase10toBaseX(seed, message.workers.length + 1, generationSlots.length)
             for (let j = 0; j < digits.length; j++) {
                 const digit = digits[j] as number
                 const gs = generationSlots[j]
@@ -93,7 +96,7 @@ onmessage = function (ev) {
                     continue
                 }
 
-                const eligibleWorker = util.getEligibleWorkersForSlot(gs, schedule, message.workers, message.tags, message.affinitiesByTagTag, message.scheduleShape)
+                const eligibleWorker = utilGeneration.getEligibleWorkersForSlot(gs, schedule, message.workers, message.tags, message.affinitiesByTagTag, message.scheduleShape)
                     .find((ew) => ew.workerId === workerId)
                 if (eligibleWorker === undefined) {
                     gs.slot.workerId = 0
@@ -154,7 +157,7 @@ onmessage = function (ev) {
                 }
 
                 for (let j = 0; j< set.length; j++) {
-                    const gs = set[j] as util.GenerationSlot
+                    const gs = set[j] as utilGeneration.GenerationSlot
 
                     // Store the sequence used to generate the schedule
                     gs.slot.index = slotIndex++
@@ -168,7 +171,7 @@ onmessage = function (ev) {
                     let assignedWorkerId: number|undefined = undefined
                     let assignedAffinity: SeaSched.AssignmentAffinity|undefined = undefined
                     let assignedAffinityNotes: string[]|undefined = undefined
-                    const eligible = util.getEligibleWorkersForSlot(gs, schedule, message.workers, message.tags, message.affinitiesByTagTag, message.scheduleShape)
+                    const eligible = utilGeneration.getEligibleWorkersForSlot(gs, schedule, message.workers, message.tags, message.affinitiesByTagTag, message.scheduleShape)
                     if (eligible.length > 0) {
                         // Determine the lowest assignment count and any workers
                         // currently at that count
@@ -227,13 +230,13 @@ onmessage = function (ev) {
 
         // If a previous iteration has produced the same schedule, don't keep
         // it again
-        schedule.hash = util.getScheduleHash(schedule)
+        schedule.hash = utilSchedule.getScheduleHash(schedule)
         if (scheduleHashes.includes(schedule.hash)) {
             shouldKeepResult = false
         }
 
         // Grade and further qualify the schedule
-        schedule.grade = util.getScheduleGrade(schedule, message.workers, message.tagAffinities, message.gradeComponents)
+        schedule.grade = utilGeneration.getScheduleGrade(schedule, message.workers, message.tagAffinities, message.gradeComponents)
         if (schedule.grade.overall < message.overallGradeThreshold) {
             shouldKeepResult = false
         }

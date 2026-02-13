@@ -5,7 +5,8 @@ import ical, { ICalCalendarMethod } from 'ical-generator'
 
 import type { DisplaySchedule, DisplayScheduleEvent, MinifiedDisplaySchedule } from '@/types'
 
-import * as util from '@/util'
+import * as utilPublishing from '@/util/publishing'
+import * as utilDate from '@/util/date'
 
 import NameHighlighter from '../NameHighlighter.vue'
 
@@ -84,7 +85,7 @@ const display = ref<DisplaySchedule>({ events: [] })
 watchEffect(async () => {
     const value = await sharingKeyAsJson.value
     if (value !== undefined) {
-        display.value = util.getDisplayScheduleFromMinifiedDisplaySchedule(value as MinifiedDisplaySchedule)
+        display.value = utilPublishing.getDisplayScheduleFromMinifiedDisplaySchedule(value as MinifiedDisplaySchedule)
     } else {
         display.value = {
             events: [],
@@ -182,7 +183,7 @@ const eventsByMonth = computed(() => {
         let match = sets.find((me) => me.yearMonth === event.calendarDate.substring(0,7))
         if (match === undefined) {
             match = {
-                name: `${util.getNormalizedDate(event.calendarDate).toLocaleString('default', { month: 'long' })} ${event.calendarDate.substring(0,4)}`,
+                name: `${utilDate.getNormalizedDate(event.calendarDate).toLocaleString('default', { month: 'long' })} ${event.calendarDate.substring(0,4)}`,
                 yearMonth: event.calendarDate.substring(0,7),
                 events: [],
             }

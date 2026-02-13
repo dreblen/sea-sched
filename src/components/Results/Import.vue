@@ -5,7 +5,7 @@ import { useSetupStore } from '@/stores/setup'
 import { useParametersStore } from '@/stores/parameters'
 import { useResultsStore } from '@/stores/results'
 
-import * as util from '@/util'
+import * as utilSchedule from '@/util/schedule'
 
 const setup = useSetupStore()
 const parameters = useParametersStore()
@@ -27,7 +27,7 @@ const isImportJsonValid = computed(() => {
 
 function processJsonImport() {
     const scopeHash = importJson.value.substring(0,32)
-    const schedule = util.deserializeSchedule(importJson.value.substring(32))
+    const schedule = utilSchedule.deserializeSchedule(importJson.value.substring(32))
 
     // Back up the current scope settings since we're about to replace them
     // temporarily for the sake of the import

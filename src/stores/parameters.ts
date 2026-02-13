@@ -2,7 +2,9 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
 import { useSetupStore } from './setup'
-import * as util from '@/util'
+import * as utilGeneration from '@/util/generation'
+import * as utilEvent from '@/util/event'
+import * as utilDate from '@/util/date'
 
 import type * as SeaSched from '@/types'
 
@@ -21,7 +23,7 @@ export const useParametersStore = defineStore('parameters', () => {
         months: []
     })
 
-    const scopeHash = computed(() => util.getScopeHash(scope.value, setup.tags))
+    const scopeHash = computed(() => utilGeneration.getScopeHash(scope.value, setup.tags))
 
     function resetScope() {
         scope.value = {
@@ -51,7 +53,7 @@ export const useParametersStore = defineStore('parameters', () => {
     function addMonth(dateStart: string, dateEnd: string) {
         scope.value.months.push({
             id: maxMonthId.value + 1,
-            name: `${util.getNormalizedDate(dateStart).toLocaleString('default', { month: 'long' })} ${dateStart.substring(0,4)}`,
+            name: `${utilDate.getNormalizedDate(dateStart).toLocaleString('default', { month: 'long' })} ${dateStart.substring(0,4)}`,
             dateStart,
             dateEnd,
             tags: []
@@ -63,30 +65,30 @@ export const useParametersStore = defineStore('parameters', () => {
     ////////////////////////////////////////////////////////////////////////////
 
     function addEvent() {
-        const newEvent = util.addEvent(scope.value.events)
-        newEvent.calendarDate = util.getDateString(new Date(scope.value.dateStart))
+        const newEvent = utilEvent.addEvent(scope.value.events)
+        newEvent.calendarDate = utilDate.getDateString(new Date(scope.value.dateStart))
 
         return newEvent
     }
 
     function removeEvent(id?: number) {
-        scope.value.events = (util.removeEvent(scope.value.events, id) as SeaSched.ScopeEvent[])
+        scope.value.events = (utilEvent.removeEvent(scope.value.events, id) as SeaSched.ScopeEvent[])
     }
 
     function addEventShift(eventId: number) {
-        return util.addEventShift(scope.value.events, eventId)
+        return utilEvent.addEventShift(scope.value.events, eventId)
     }
 
     function removeEventShift(eventId?: number, shiftId?: number) {
-        util.removeEventShift(scope.value.events, eventId, shiftId)
+        utilEvent.removeEventShift(scope.value.events, eventId, shiftId)
     }
 
     function addShiftSlot(eventId: number, shiftId: number) {
-        return util.addShiftSlot(scope.value.events, eventId, shiftId)
+        return utilEvent.addShiftSlot(scope.value.events, eventId, shiftId)
     }
 
     function removeShiftSlot(eventId?: number, shiftId?: number, slotId?: number) {
-        util.removeShiftSlot(scope.value.events, eventId, shiftId, slotId)
+        utilEvent.removeShiftSlot(scope.value.events, eventId, shiftId, slotId)
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -98,7 +100,7 @@ export const useParametersStore = defineStore('parameters', () => {
     function generateScopeEvents() {
         // Iterate our base template events and fill out their recurrences
         // within our scope range, avoiding duplicates
-        const maxDate = util.getNormalizedDate(scope.value.dateEnd)
+        const maxDate = utilDate.getNormalizedDate(scope.value.dateEnd)
         const map = {} as { [calendarDate: string]: number[] }
         for (const e of setup.events.filter((e) => templateEventIds.value.includes(e.id))) {
             for (const r of e.recurrences) {
@@ -107,7 +109,7 @@ export const useParametersStore = defineStore('parameters', () => {
                         let bufferDate = new Date(scope.value.dateStart)
 
                         do {
-                            const ds = util.getDateString(bufferDate)
+                            const ds = utilDate.getDateString(bufferDate)
                             if (map[ds] === undefined) {
                                 map[ds] = []
                             }
@@ -124,7 +126,7 @@ export const useParametersStore = defineStore('parameters', () => {
                         // Advance our buffer until it is at the correct day of
                         // the week for the pattern
                         // let bufferDate = new Date(scope.value.dateStart)
-                        let bufferDate = util.getNormalizedDate(scope.value.dateStart)
+                        let bufferDate = utilDate.getNormalizedDate(scope.value.dateStart)
                         while (bufferDate <= maxDate) {
                             if (bufferDate.getDay() + 1 === r.weekOffset) {
                                 break
@@ -141,7 +143,7 @@ export const useParametersStore = defineStore('parameters', () => {
 
                         // Iterate the actual recurrence pattern
                         do {
-                            const ds = util.getDateString(bufferDate)
+                            const ds = utilDate.getDateString(bufferDate)
                             if (map[ds] === undefined) {
                                 map[ds] = []
                             }
@@ -157,19 +159,19 @@ export const useParametersStore = defineStore('parameters', () => {
                     case 'month': {
                         // Initialize our buffer to the correct day of the month
                         // in the starting month of our scope range
-                        let bufferDate = util.getNormalizedDate(scope.value.dateStart)
+                        let bufferDate = utilDate.getNormalizedDate(scope.value.dateStart)
                         bufferDate.setDate(r.monthOffset)
 
                         // Iterate the recurrence pattern
                         do {
                             // Skip this iteration if we had to go before the
                             // start of the scope range for the initialization
-                            if (bufferDate < util.getNormalizedDate(scope.value.dateStart)) {
+                            if (bufferDate < utilDate.getNormalizedDate(scope.value.dateStart)) {
                                 bufferDate.setMonth(bufferDate.getMonth() + 1)
                                 continue
                             }
 
-                            const ds = util.getDateString(bufferDate)
+                            const ds = utilDate.getDateString(bufferDate)
                             if (map[ds] === undefined) {
                                 map[ds] = []
                             }
@@ -256,7 +258,7 @@ export const useParametersStore = defineStore('parameters', () => {
         scope.value.weeks = []
         scope.value.months = []
 
-        const { months, weeks } = util.getMonthsAndWeeksFromDateRange(scope.value.dateStart, scope.value.dateEnd)
+        const { months, weeks } = utilDate.getMonthsAndWeeksFromDateRange(scope.value.dateStart, scope.value.dateEnd)
         for (const month of months) {
             addMonth(month.dateStart, month.dateEnd)
         }

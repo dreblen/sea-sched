@@ -9,8 +9,10 @@ import { useSetupStore } from '@/stores/setup'
 import { useParametersStore } from '@/stores/parameters'
 import { useResultsStore } from '@/stores/results'
 
-import * as util from '@/util'
-import type { GenerationSlot } from '@/util'
+import * as utilGeneration from '@/util/generation'
+import type { GenerationSlot } from '@/util/generation'
+import * as utilSchedule from '@/util/schedule'
+import * as utilPublishing from '@/util/publishing'
 
 import ListToDetail from '../ListToDetail.vue'
 import NameHighlighter from '../NameHighlighter.vue'
@@ -53,7 +55,7 @@ function getAssignmentAffinityProps(workerId?: number, value?: AssignmentAffinit
     }
 
     // Otherwise, we use the actual affinity values
-    const type = util.getAssignmentAffinityType(value)
+    const type = utilGeneration.getAssignmentAffinityType(value)
     switch (type) {
         case AssignmentAffinityType.Positive:
             return ['success','mdi-check-circle']
@@ -114,7 +116,7 @@ function onCurrentScheduleChange(id?: number) {
                     continue
                 }
 
-                slot.affinityNotes = util.getConvertedAffinityNotes(slot.affinityNotes, results.tags)
+                slot.affinityNotes = utilPublishing.getConvertedAffinityNotes(slot.affinityNotes, results.tags)
             }
         }
     }
@@ -269,7 +271,7 @@ function onWorkerNameClick(schedule: Schedule, slot: ScheduleSlot) {
                     // the current assignment details since they will be
                     // excluded from the usual consideration unless it is an
                     // intentional non-assignment.
-                    eligible = util.getEligibleWorkersForSlot(gs, schedule, setup.workers, setup.tags, setup.affinitiesByTagTag, setup.scheduleShape, true)
+                    eligible = utilGeneration.getEligibleWorkersForSlot(gs, schedule, setup.workers, setup.tags, setup.affinitiesByTagTag, setup.scheduleShape, true)
                     if (slot.workerId !== undefined && slot.workerId !== 0) {
                         eligible.push({
                             workerId: slot.workerId,
@@ -337,7 +339,7 @@ function onWorkerNameClick(schedule: Schedule, slot: ScheduleSlot) {
         if (ew.affinityNotes === undefined) {
             continue
         } else {
-            ew.affinityNotes = util.getConvertedAffinityNotes(ew.affinityNotes, results.tags)
+            ew.affinityNotes = utilPublishing.getConvertedAffinityNotes(ew.affinityNotes, results.tags)
         }
     }
 
@@ -448,12 +450,12 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
 
     // Get a flat version of the reference schedule so we can find slots easily
     // based on step IDs
-    const gss = util.newGenerationSlots(schedule.events)
+    const gss = utilGeneration.newGenerationSlots(schedule.events)
 
     // Get a version of this schedule with only the slot assignments from the
     // selected generation steps
-    const newSchedule = util.newSchedule(schedule.events)
-    const newGss = util.newGenerationSlots(newSchedule.events)
+    const newSchedule = utilSchedule.newSchedule(schedule.events)
+    const newGss = utilGeneration.newGenerationSlots(newSchedule.events)
     for (const step of schedule.steps.filter((s) => selectedScheduleSteps.value.includes(s.id))) {
         const gs = gss.find((gs) => gs.event.id === step.eventId && gs.shift.id === step.shiftId && gs.slot.id === step.slotId)
         const newGs = newGss.find((gs) => gs.event.id === step.eventId && gs.shift.id === step.shiftId && gs.slot.id === step.slotId)
@@ -475,7 +477,7 @@ function onUseStepsForNewSchedule(schedule: Schedule) {
 function copyScheduleExportToClipboard(schedule: Schedule) {
     // We include the current scope hash along with the serialized schedule so
     // that it's possible to use step data again after importing
-    const serialized = util.serializeSchedule(schedule)
+    const serialized = utilSchedule.serializeSchedule(schedule)
     navigator.clipboard.writeText(results.scopeHash + serialized)
 }
 
@@ -733,8 +735,8 @@ function copyScheduleTabDelimitedToClipboard(schedule: Schedule) {
 }
 
 function getDisplayScheduleSharingKey(schedule: Schedule) {
-    const display = util.getDisplayScheduleFromSchedule(schedule, setup.workers)
-    const minified = util.getMinifiedDisplayScheduleFromDisplaySchedule(display)
+    const display = utilPublishing.getDisplayScheduleFromSchedule(schedule, setup.workers)
+    const minified = utilPublishing.getMinifiedDisplayScheduleFromDisplaySchedule(display)
     return btoa(JSON.stringify(minified))
 }
 
