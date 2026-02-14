@@ -69,8 +69,16 @@ export function getStandardDeviation(valueList: number[]) {
  * ordered so the first index is the highest power and the last index is the
  * lowest power, matching common visual representation of number systems and not
  * the logical association of "lowest index" = "lowest power."
+ * @throws RangeError if the specified base is less than 2.
  */
 export function getBase10toBaseX(original: number, base: number, arrayPadding?: number) {
+    // Stop short if we have an invalid base. This shouldn't ever occur in the
+    // way we call this method, but the check is here to prevent an infinite
+    // loop if it does for some reason.
+    if (base < 2) {
+        throw new RangeError('Base must be >= 2')
+    }
+
     // Determine the highest power we need to work with
     let topPower = 0
     for (let i = 0; ; i++) {
