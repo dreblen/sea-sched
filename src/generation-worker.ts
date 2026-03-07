@@ -1,5 +1,6 @@
 import type * as SeaSched from '@/types'
 
+import * as utilDate from '@/util/date'
 import * as utilNumber from '@/util/number'
 import * as utilSchedule from '@/util/schedule'
 import * as utilGeneration from '@/util/generation'
@@ -59,6 +60,12 @@ function generateSchedules(message: InboundMessage) {
     const schedules = [] as SeaSched.Schedule[]
     const scheduleHashes = [] as string[]
 
+    // Gather context data about the schedule's segments. This is used to test
+    // limits, but we don't want to recalculate it for each cycle.
+    const scheduleDateStart = message.events.reduce((p, v) => (v.calendarDate < p) ? v.calendarDate : p,'9999-01-01')
+    const scheduleDateEnd = message.events.reduce((p, v) => (v.calendarDate > p) ? v.calendarDate : p,'0000-01-01')
+    const scheduleScope = utilDate.getMonthsAndWeeksFromDateRange(scheduleDateStart, scheduleDateEnd)
+
     for (let i = 0; i < message.permutationThreshold; i++) {
         const seed = message.seed + i
         const schedule = utilSchedule.newSchedule(message.events, true)
@@ -111,7 +118,7 @@ function generateSchedules(message: InboundMessage) {
                     continue
                 }
 
-                const eligibleWorker = utilGeneration.getEligibleWorkersForSlot(gs, schedule, message.workers, message.tags, message.affinitiesByTagTag, message.scheduleShape)
+                const eligibleWorker = utilGeneration.getEligibleWorkersForSlot(gs, schedule, scheduleScope, message.workers, message.tags, message.affinitiesByTagTag, message.scheduleShape)
                     .find((ew) => ew.workerId === workerId)
                 if (eligibleWorker === undefined) {
                     gs.slot.workerId = 0
@@ -186,7 +193,7 @@ function generateSchedules(message: InboundMessage) {
                     let assignedWorkerId: number|undefined = undefined
                     let assignedAffinity: SeaSched.AssignmentAffinity|undefined = undefined
                     let assignedAffinityNotes: string[]|undefined = undefined
-                    const eligible = utilGeneration.getEligibleWorkersForSlot(gs, schedule, message.workers, message.tags, message.affinitiesByTagTag, message.scheduleShape)
+                    const eligible = utilGeneration.getEligibleWorkersForSlot(gs, schedule, scheduleScope, message.workers, message.tags, message.affinitiesByTagTag, message.scheduleShape)
                     if (eligible.length > 0) {
                         // Determine the lowest assignment count and any workers
                         // currently at that count

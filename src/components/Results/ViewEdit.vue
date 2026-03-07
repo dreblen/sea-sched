@@ -271,7 +271,7 @@ function onWorkerNameClick(schedule: Schedule, slot: ScheduleSlot) {
                     // the current assignment details since they will be
                     // excluded from the usual consideration unless it is an
                     // intentional non-assignment.
-                    eligible = utilGeneration.getEligibleWorkersForSlot(gs, schedule, setup.workers, setup.tags, setup.affinitiesByTagTag, setup.scheduleShape, true)
+                    eligible = utilGeneration.getEligibleWorkersForSlot(gs, schedule, null, setup.workers, setup.tags, setup.affinitiesByTagTag, setup.scheduleShape, true)
                     if (slot.workerId !== undefined && slot.workerId !== 0) {
                         eligible.push({
                             workerId: slot.workerId,

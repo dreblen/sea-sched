@@ -150,7 +150,7 @@ async function generate() {
             continue
         }
 
-        let eligible = utilGeneration.getEligibleWorkersForSlot(slot, baseSchedule, activeWorkers, setup.tags, setup.affinitiesByTagTag, setup.scheduleShape)
+        let eligible = utilGeneration.getEligibleWorkersForSlot(slot, baseSchedule, null, activeWorkers, setup.tags, setup.affinitiesByTagTag, setup.scheduleShape)
         if (eligible.length === 1) {
             slot.slot.workerId = eligible[0]?.workerId
             slot.slot.affinity = eligible[0]?.affinity

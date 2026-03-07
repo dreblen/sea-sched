@@ -23,6 +23,16 @@ export function getDateString(date?: Date) {
     return date.toISOString().split('T')[0] as string
 }
 
+export interface DateRange {
+    dateStart: string
+    dateEnd: string
+}
+
+export interface MonthAndWeekRanges {
+    months: DateRange[]
+    weeks: DateRange[]
+}
+
 /**
  * Extract a list of month and week date ranges from the given base date range.
  * 
@@ -30,9 +40,9 @@ export function getDateString(date?: Date) {
  * @param dateEnd The last date to consider (inclusive).
  * @returns Object containing months and weeks arrays with date range strings.
  */
-export function getMonthsAndWeeksFromDateRange(dateStart: string, dateEnd: string) {
-    const months = [] as { dateStart: string, dateEnd: string }[]
-    const weeks = [] as { dateStart: string, dateEnd: string }[]
+export function getMonthsAndWeeksFromDateRange(dateStart: string, dateEnd: string): MonthAndWeekRanges {
+    const months = [] as DateRange[]
+    const weeks = [] as DateRange[]
     
     // Iterate our range and identify weeks and months within it
     const maxDate = getNormalizedDate(dateEnd)

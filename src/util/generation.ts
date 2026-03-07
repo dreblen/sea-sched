@@ -134,7 +134,7 @@ export function getAssignmentAffinityType(value?: AssignmentAffinity) {
  * @returns List of worker IDs, assignment affinities, and associated
  * descriptive notes.
  */
-export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule, workers: Worker[], tags: Tag[], affinitiesByTagTag: TagAffinityMapMap, scheduleShape: ScheduleShape, returnAll?: boolean): EligibleWorker[] {
+export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule, scheduleScope: utilDate.MonthAndWeekRanges|null, workers: Worker[], tags: Tag[], affinitiesByTagTag: TagAffinityMapMap, scheduleShape: ScheduleShape, returnAll?: boolean): EligibleWorker[] {
     // Gather context data about slots that are in the same shift as the one
     // being considered for assignment
     const siblingSlots = gs.shift.slots.filter((l) => l.groupId === gs.slot.groupId && l.id !== gs.slot.id)
@@ -145,10 +145,15 @@ export function getEligibleWorkersForSlot(gs: GenerationSlot, schedule: Schedule
 
     // Gather context data about the schedule's segments relevant for the
     // generation slot being considered. This is used to test limits, but we
-    // don't want to recalculate it per worker/limit.
-    const scheduleDateStart = schedule.events.reduce((p, v) => (v.calendarDate < p) ? v.calendarDate : p,'9999-01-01')
-    const scheduleDateEnd = schedule.events.reduce((p, v) => (v.calendarDate > p) ? v.calendarDate : p,'0000-01-01')
-    const scheduleScope = utilDate.getMonthsAndWeeksFromDateRange(scheduleDateStart, scheduleDateEnd)
+    // don't want to recalculate it per worker/limit. We take scope information
+    // as a parameter to reduce duplication in bulk-generation scenarios, but we
+    // retain logic here so it doesn't have to be repeated for the several one-
+    // off generation scenarios as well.
+    if (scheduleScope === null) {
+        const scheduleDateStart = schedule.events.reduce((p, v) => (v.calendarDate < p) ? v.calendarDate : p,'9999-01-01')
+        const scheduleDateEnd = schedule.events.reduce((p, v) => (v.calendarDate > p) ? v.calendarDate : p,'0000-01-01')
+        scheduleScope = utilDate.getMonthsAndWeeksFromDateRange(scheduleDateStart, scheduleDateEnd)
+    }
     const thisMonth = scheduleScope.months.find((m) => gs.event.calendarDate >= m.dateStart && gs.event.calendarDate <= m.dateEnd)
     const thisWeek = scheduleScope.weeks.find((w) => gs.event.calendarDate >= w.dateStart && gs.event.calendarDate <= w.dateEnd)
 
