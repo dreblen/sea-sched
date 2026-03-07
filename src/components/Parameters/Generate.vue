@@ -240,6 +240,7 @@ async function generate() {
         }
 
         const message: InboundMessage = {
+            useWasm: parameters.useWasm,
             seed: Math.ceil(permutationThresholdForMessage.value / numThreads) * i,
             events: baseSchedule.events,
             workers: activeWorkers,
@@ -404,6 +405,23 @@ watchEffect(() => {
                                                 </template>
                                             </template>
                                         </v-switch>
+                                    </v-col>
+                                </v-row>
+                            </v-col>
+                            <v-col v-if="$route.query.debug" cols="12">
+                                <v-row>
+                                    <v-col class="pb-0">
+                                        Which backend should be used to generate
+                                        schedules? WASM should be faster but is more
+                                        experimental.
+                                    </v-col>
+                                    <v-col cols="12" sm="3" class="pt-0">
+                                        <v-switch
+                                            v-model="parameters.useWasm"
+                                            :label="`DEBUG: ${parameters.useWasm ? 'WASM' : 'JS'}`"
+                                            color="error"
+                                            hide-details
+                                        />
                                     </v-col>
                                 </v-row>
                             </v-col>

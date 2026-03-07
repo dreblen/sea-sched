@@ -126,6 +126,7 @@ export enum AssignmentAffinityType {
 }
 
 export enum AssignmentAffinity {
+    Undefined = -1,
     Required = 1,
     Preferred = 2,
     Neutral = 3,

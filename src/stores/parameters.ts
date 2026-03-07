@@ -299,6 +299,7 @@ export const useParametersStore = defineStore('parameters', () => {
     const permutationThreshold = ref(1000000)
     const overallGradeThreshold = ref(90)
     const resultThreshold = ref(25)
+    const useWasm = ref(false)
 
     const baseSchedule = ref<SeaSched.Schedule>()
     const useBaseSchedule = ref(false)
@@ -347,6 +348,7 @@ export const useParametersStore = defineStore('parameters', () => {
         permutationThreshold,
         overallGradeThreshold,
         resultThreshold,
+        useWasm,
         baseSchedule,
         useBaseSchedule,
         serialize,

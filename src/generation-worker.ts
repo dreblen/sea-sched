@@ -8,7 +8,13 @@ import { AssignmentAffinity } from '@/types'
 
 import random from 'random'
 
+import * as jsToWasm from '@/js-to-wasm-helper'
+import * as wasmToJs from '@/wasm-to-js-helper'
+
+import Module from '@/wasm/gw'
+
 export interface InboundMessage {
+    useWasm: boolean
     seed: number
     events: SeaSched.ScheduleEvent[]
     workers: SeaSched.Worker[]
@@ -39,11 +45,20 @@ export interface OutboundMessage {
     data: OutboundProgressData|OutboundResultData|OutboundFinishData
 }
 
-onmessage = function (ev) {
-    const message: InboundMessage = JSON.parse(ev.data)
+function sendProgress(value: number) {
+    const progress: OutboundMessage = {
+        type: 'progress',
+        data: {
+            value
+        }
+    }
+    postMessage(progress)
+}
 
+function generateSchedules(message: InboundMessage) {
     const schedules = [] as SeaSched.Schedule[]
     const scheduleHashes = [] as string[]
+
     for (let i = 0; i < message.permutationThreshold; i++) {
         const seed = message.seed + i
         const schedule = utilSchedule.newSchedule(message.events, true)
@@ -269,14 +284,39 @@ onmessage = function (ev) {
         // threshold, send an update on where we're at
         const reportingThreshold = 100
         if (i % reportingThreshold === 0) {
-            const progress: OutboundMessage = {
-                type: 'progress',
-                data: {
-                    value: reportingThreshold
-                }
-            }
-            this.postMessage(progress)
+            sendProgress(reportingThreshold)
         }
+    }
+
+    return schedules
+}
+
+onmessage = async function (ev) {
+    const message: InboundMessage = JSON.parse(ev.data)
+    let schedules = [] as SeaSched.Schedule[]
+
+    if (message.useWasm) {
+        const wasm = await Module()
+
+        const wSchedules = wasm.generateSchedules(
+            sendProgress,
+            BigInt(message.seed),
+            jsToWasm.getScheduleEvents(wasm, message.events),
+            jsToWasm.getWorkers(wasm, message.workers),
+            jsToWasm.getTags(wasm, message.tags),
+            jsToWasm.getTagAffinities(wasm, message.tagAffinities),
+            jsToWasm.getTagAffinityMapMap(wasm, message.affinitiesByTagTag),
+            jsToWasm.getGradeComponents(wasm, message.gradeComponents),
+            message.scheduleShape,
+            message.isStopShort,
+            BigInt(message.permutationThreshold),
+            message.overallGradeThreshold,
+            message.resultThreshold,
+        )
+
+        schedules.push(...wasmToJs.getSchedules(wSchedules))
+    } else {
+        schedules = generateSchedules(message)
     }
 
     // Send the final results back to the caller, one at a time so the bulk

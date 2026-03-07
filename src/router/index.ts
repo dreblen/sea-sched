@@ -17,4 +17,16 @@ const router = createRouter({
     ],
 })
 
+// Make sure a query string specified on one route is applied to the next route
+router.beforeEach((to, from) => {
+    if (Object.keys(from.query).length > 0 && Object.keys(to.query).length === 0) {
+        return {
+            ...to,
+            query: { ...from.query },
+        }
+    } else {
+        return true
+    }
+})
+
 export default router
