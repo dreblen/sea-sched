@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "lint": "eslint . --fix --cache"
+    "lint": "eslint . --fix --cache",
+    "dependencies": "node src/package-license-helper.js"
   },
   "dependencies": {
     "@fontsource/roboto": "^5.2.9",

@@ -9,11 +9,25 @@ const tabs = [
 
 <template>
     <v-app>
-        <v-tabs v-if="!$route.path.startsWith('/view')" align-tabs="center" bg-color="primary">
-            <v-tab v-for="tab in tabs" :key="tab.name" :to="tab.to">
-                {{ tab.name }}
-            </v-tab>
-        </v-tabs>
+        <v-app-bar
+            color="primary"
+            v-if="!$route.path.startsWith('/view') && $route.path !== '/'"
+            density="compact"
+        >
+            <v-app-bar-title>
+                <v-tabs align-tabs="center" bg-color="primary">
+                    <v-tab v-for="tab in tabs" :key="tab.name" :to="tab.to">
+                        {{ tab.name }}
+                    </v-tab>
+                </v-tabs>
+            </v-app-bar-title>
+            <template #prepend>
+                <v-app-bar-nav-icon
+                    icon="mdi-home"
+                    to="/"
+                />
+            </template>
+        </v-app-bar>
         <v-main>
             <router-view></router-view>
         </v-main>
