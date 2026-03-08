@@ -25,7 +25,7 @@ export function getScheduleSlot(wasm: MainModule, slot: SeaSched.ScheduleSlot) {
         groupId: slot.groupId,
         isRequired: slot.isRequired,
         workerId: slot.workerId || -1,
-        affinity: (slot.affinity as any) || wasm.AssignmentAffinity.Undefined,
+        affinity: (slot.affinity === undefined) ? wasm.AssignmentAffinity.Undefined : { value: slot.affinity },
         affinityNotes: getVectorString(wasm, slot.affinityNotes || []),
         index: slot.index || -1,
     }
