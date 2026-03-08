@@ -619,6 +619,8 @@ export const useSetupStore = defineStore('setup', () => {
             gradeComponents: empty,
             scheduleShape: JSON.stringify(defaultScheduleShape),
         }))
+
+        resetGradeComponents()
     }
 
     return {
