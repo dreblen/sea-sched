@@ -492,8 +492,9 @@ vector<EligibleWorker> getEligibleWorkersForSlot(const GenerationSlot& gs, const
     // If we had any required workers and aren't returning all possibilities,
     // remove any who weren't required from our possible workers list
     if (requiredWorkerIds.size() > 0 && !returnAll) {
-        for (int id : possibleWorkerIds) {
-            possibleWorkerIds.erase(id);
+        possibleWorkerIds.clear();
+        for (int id : requiredWorkerIds) {
+            possibleWorkerIds.insert(id);
         }
     }
     // If we had any disallowed workers and aren't returning all possibilities,
@@ -1043,7 +1044,7 @@ ScheduleGrade getScheduleGrade(Schedule& schedule, const vector<Worker>& availab
         // are 0, neutral are 1, and positive are 2
         double avgAffinity = 0;
         if (totalAffinities > 0) {
-            avgAffinity = totalWeightedAffinities / totalAffinities;
+            avgAffinity = ((double)totalWeightedAffinities) / totalAffinities;
         }
 
         // - Check whether or not any positive affinities were possible for the
